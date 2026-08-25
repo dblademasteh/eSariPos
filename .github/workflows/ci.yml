@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pos
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pos"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      NODE_ENV: test
+      JWT_SECRET: ci-test-secret-ci-test-secret-0123456789
+      ADMIN_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/pos
+      APP_DATABASE_URL: postgresql://pos_app:pos_app@localhost:5433/pos
+      NOVAPOS_URL: http://localhost:4000/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci
+
+      - name: Run migrations
+        working-directory: server
+        run: npm run migrate
+
+      - name: Seed demo data (idempotent)
+        working-directory: server
+        run: node src/db/seed.js || true
+
+      - name: Start API in background
+        working-directory: server
+        run: |
+          node src/index.js &
+          sleep 3
+
+      - name: API smoke tests (node:test)
+        run: node --test tests/api/
+
+      # Playwright E2E (browser flows) - enable once specs land:
+      # - name: Install web deps
+      #   working-directory: web
+      #   run: npm ci
+      # - name: Playwright tests
+      #   run: npx playwright test
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install web deps
+        working-directory: web
+        run: npm ci
+      - name: Build SPA
+        working-directory: web
+        run: npm run build
