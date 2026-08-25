@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { fmtDateTime, makeMoney } from '../lib/format.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { EmptyState, Field, Modal, Spinner, useToast } from '../components/ui.jsx';
+import { Ticket } from 'lucide-react';
 
 export default function GiftCards() {
   const { tenant } = useAuth();
@@ -58,7 +59,7 @@ export default function GiftCards() {
       {!cards ? (
         <Spinner />
       ) : cards.length === 0 ? (
-        <EmptyState icon="🎟️" title="No gift cards yet" subtitle="Issue one to get started." />
+        <EmptyState icon={<Ticket className="mx-auto h-12 w-12 opacity-30" />} title="No gift cards yet" subtitle="Issue one to get started." />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
           <table className="table">

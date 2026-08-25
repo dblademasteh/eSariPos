@@ -5,6 +5,7 @@ import { downloadCsv } from '../lib/export.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { EmptyState, Field, Modal, Spinner, useToast } from '../components/ui.jsx';
 import Receipt from '../components/Receipt.jsx';
+import { Receipt as ReceiptIcon, RotateCcw, Banknote, Printer, Download } from 'lucide-react';
 
 const STATUS_BADGES = {
   completed: { cls: 'badge-success', label: 'Completed' },
@@ -97,7 +98,7 @@ export default function Orders() {
                 ], orders.map((o) => ({ ...o, time: o.createdAt })))
               }
             >
-              ⬇ CSV
+              <Download className="mr-1 inline h-4 w-4" /> CSV
             </button>
           )}
         </div>
@@ -106,7 +107,7 @@ export default function Orders() {
       {!orders ? (
         <Spinner />
       ) : orders.length === 0 ? (
-        <EmptyState icon="🧾" title="No orders on this date" />
+        <EmptyState icon={<ReceiptIcon className="mx-auto h-12 w-12 opacity-30" />} title="No orders on this date" />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
           <table className="table">
@@ -155,13 +156,13 @@ export default function Orders() {
             <div className="modal-action print:hidden">
               {canRefund && ['completed', 'partially_refunded'].includes(selected.status) && (
                 <button className="btn btn-outline btn-error mr-auto" onClick={() => setRefunding(selected)}>
-                  ↩️ Refund…
+                  <RotateCcw className="mr-1 inline h-4 w-4" /> Refund…
                 </button>
               )}
               {manage && selected.status === 'layaway' && (
                 <>
                   <button className="btn btn-primary mr-auto" onClick={() => setSettling(selected)}>
-                    💰 Settle balance
+                    <Banknote className="mr-1 inline h-4 w-4" /> Settle balance
                   </button>
                   <button
                     className="btn btn-outline btn-error"
@@ -181,7 +182,7 @@ export default function Orders() {
                 </>
               )}
               <button className="btn" onClick={() => window.print()}>
-                🖨️ Print
+                <Printer className="mr-1 inline h-4 w-4" /> Print
               </button>
               <button className="btn btn-primary" onClick={() => setSelected(null)}>
                 Close
@@ -307,7 +308,7 @@ function RefundModal({ open, order, money, onClose, onDone }) {
           )}
           {refundable.length > 0 && (
             <button className={`btn btn-outline btn-error ${busy ? 'loading' : ''}`} disabled={busy} onClick={() => send(null)}>
-              ↩️ Refund entire order
+              <RotateCcw className="mr-1 inline h-4 w-4" /> Refund entire order
             </button>
           )}
         </div>
@@ -369,10 +370,10 @@ function SettleModal({ open, order, money, onClose, onDone }) {
         </div>
         <Field label="Payment method">
           <select className="select select-md w-full" value={method} onChange={(e) => setMethod(e.target.value)}>
-            <option value="cash">💵 Cash</option>
-            <option value="card">💳 Card</option>
-            <option value="mobile">📱 Mobile</option>
-            <option value="gift_card">🎟️ Gift card</option>
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="mobile">Mobile</option>
+            <option value="gift_card">Gift card</option>
             <option value="other">Other</option>
           </select>
         </Field>

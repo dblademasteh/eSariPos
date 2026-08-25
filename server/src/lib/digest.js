@@ -41,7 +41,7 @@ export async function computeDailySummary(poolish, tenantId, tz, daysAgo) {
 
 function renderText(summary, slug) {
   return [
-    `NovaPOS daily summary · ${slug} (${summary.daysAgo === 1 ? 'yesterday' : `${summary.daysAgo} days ago`})`,
+    `eSariPOS daily summary · ${slug} (${summary.daysAgo === 1 ? 'yesterday' : `${summary.daysAgo} days ago`})`,
     ``,
     `Orders:      ${summary.ordersCount}`,
     `Net revenue: ${summary.revenue.toFixed(2)}`,
@@ -86,7 +86,7 @@ export function startDigestScheduler() {
         if (!to) continue;
         await sendMail({
           to,
-          subject: `NovaPOS daily summary · ${tenant.slug}`,
+          subject: `eSariPOS daily summary · ${tenant.slug}`,
           text: renderText(summary, tenant.slug),
         });
         await adminPool.query(

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Building2, Banknote, Receipt, Wallet, Star, Package, Lock, Plug } from 'lucide-react';
 import { api } from '../api/client.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { Field, useToast } from '../components/ui.jsx';
@@ -15,6 +16,8 @@ const PAYMENT_METHODS = [
   { value: 'card', label: 'Card (manual)' },
   { value: 'card_terminal', label: 'Card terminal' },
   { value: 'mobile', label: 'Mobile / QR' },
+  { value: 'gcash', label: 'GCash' },
+  { value: 'maya', label: 'Maya (PayMaya)' },
   { value: 'other', label: 'Other' },
 ];
 const TIMEZONES = [
@@ -27,14 +30,14 @@ const TIMEZONES = [
 ];
 
 const TABS = [
-  { id: 'business', label: 'Business', icon: '🏢' },
-  { id: 'financial', label: 'Financial', icon: '💰' },
-  { id: 'receipt', label: 'Receipt', icon: '🧾' },
-  { id: 'register', label: 'Register', icon: '💵' },
-  { id: 'loyalty', label: 'Loyalty', icon: '⭐' },
-  { id: 'inventory', label: 'Inventory', icon: '📦' },
-  { id: 'security', label: 'Security', icon: '🔐' },
-  { id: 'integrations', label: 'Integrations', icon: '🔌' },
+  { id: 'business', label: 'Business', icon: Building2 },
+  { id: 'financial', label: 'Financial', icon: Banknote },
+  { id: 'receipt', label: 'Receipt', icon: Receipt },
+  { id: 'register', label: 'Register', icon: Wallet },
+  { id: 'loyalty', label: 'Loyalty', icon: Star },
+  { id: 'inventory', label: 'Inventory', icon: Package },
+  { id: 'security', label: 'Security', icon: Lock },
+  { id: 'integrations', label: 'Integrations', icon: Plug },
 ];
 
 function TwoFactorCard() {
@@ -206,7 +209,7 @@ function PlatformCard() {
 
       <div>
         <h3 className="mb-2 font-semibold">Webhooks</h3>
-        <p className="mb-3 text-sm opacity-60">Signed with HMAC-SHA256 (<code className="font-mono text-xs">X-NovaPOS-Signature</code>).</p>
+        <p className="mb-3 text-sm opacity-60">Signed with HMAC-SHA256 (<code className="font-mono text-xs">X-eSariPOS-Signature</code>).</p>
         {newHookSecret && (
           <div className="mb-3 rounded-xl bg-success/10 p-3 text-sm">
             Signing secret (shown once):
@@ -251,6 +254,12 @@ const toForm = (t) => ({
   cashRounding: t?.cashRounding ?? 'none',
   loyaltyEarnPerUnit: t?.loyaltyEarnPerUnit ?? 1,
   loyaltyPointCents: t?.loyaltyPointCents ?? 1,
+  loyaltyMinRedeem: t?.loyaltyMinRedeem ?? 100,
+  loyaltyMaxRedemptionPct: t?.loyaltyMaxRedemptionPct ?? 100,
+  loyaltyExpiryDays: t?.loyaltyExpiryDays ?? 0,
+  inventoryStockMode: t?.inventoryStockMode ?? 'track',
+  inventoryRequireAdjustmentNote: t?.inventoryRequireAdjustmentNote ?? true,
+  inventoryAutoReorder: t?.inventoryAutoReorder ?? false,
   timezone: t?.timezone ?? 'UTC',
   taxInclusive: t?.taxInclusive ?? false,
   defaultOpeningFloat: t?.defaultOpeningFloat ?? 100,
@@ -262,6 +271,14 @@ const toForm = (t) => ({
   tipSuggestions: t?.tipSuggestions ?? '10,15,20',
   autoCloseDrawerHours: t?.autoCloseDrawerHours ?? 0,
   receiptWidth: t?.receiptWidth ?? 40,
+  autoPrintReceipt: t?.autoPrintReceipt ?? true,
+  openDrawerOnCash: t?.openDrawerOnCash ?? true,
+  allowNegativeStock: t?.allowNegativeStock ?? false,
+  maxDiscountPct: t?.maxDiscountPct ?? 100,
+  requireCustomer: t?.requireCustomer ?? false,
+  tin: t?.tin ?? '',
+  birAccreditationNo: t?.birAccreditationNo ?? '',
+  machineSerialNo: t?.machineSerialNo ?? '',
 });
 
 export default function Settings() {
@@ -293,6 +310,12 @@ export default function Settings() {
           cashRounding: form.cashRounding,
           loyaltyEarnPerUnit: Number(form.loyaltyEarnPerUnit) || 0,
           loyaltyPointCents: Number(form.loyaltyPointCents) || 1,
+          loyaltyMinRedeem: Number(form.loyaltyMinRedeem) || 0,
+          loyaltyMaxRedemptionPct: Number(form.loyaltyMaxRedemptionPct) || 100,
+          loyaltyExpiryDays: Number(form.loyaltyExpiryDays) || 0,
+          inventoryStockMode: form.inventoryStockMode,
+          inventoryRequireAdjustmentNote: form.inventoryRequireAdjustmentNote,
+          inventoryAutoReorder: form.inventoryAutoReorder,
           timezone: form.timezone,
           taxInclusive: form.taxInclusive,
           defaultOpeningFloat: Number(form.defaultOpeningFloat) || 0,
@@ -304,6 +327,14 @@ export default function Settings() {
           tipSuggestions: form.tipSuggestions || '10,15,20',
           autoCloseDrawerHours: Number(form.autoCloseDrawerHours) || 0,
           receiptWidth: Number(form.receiptWidth) || 40,
+          autoPrintReceipt: form.autoPrintReceipt,
+          openDrawerOnCash: form.openDrawerOnCash,
+          allowNegativeStock: form.allowNegativeStock,
+          maxDiscountPct: Number(form.maxDiscountPct) || 0,
+          requireCustomer: form.requireCustomer,
+          tin: form.tin || null,
+          birAccreditationNo: form.birAccreditationNo || null,
+          machineSerialNo: form.machineSerialNo || null,
         },
       });
       await refreshMe();
@@ -331,7 +362,7 @@ export default function Settings() {
             className={`tab gap-1 ${activeTab === tab.id ? 'tab-active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
           >
-            <span className="hidden sm:inline">{tab.icon}</span> {tab.label}
+            <tab.icon className="hidden sm:inline h-4 w-4" /> {tab.label}
           </button>
         ))}
       </div>
@@ -360,6 +391,19 @@ export default function Settings() {
                   {TIMEZONES.map((tz) => <option key={tz}>{tz}</option>)}
                 </select>
               </Field>
+
+              <div className="divider text-xs opacity-50">BIR Compliance (Philippines)</div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Field label="TIN (Tax Identification Number)" hint="Required on Official Receipts">
+                  <input className="input input-md w-full" placeholder="000-000-000-000" value={form.tin} onChange={set('tin')} />
+                </Field>
+                <Field label="BIR Accreditation No." hint="POS system BIR permit number">
+                  <input className="input input-md w-full" placeholder="BIR-0000-00000000" value={form.birAccreditationNo} onChange={set('birAccreditationNo')} />
+                </Field>
+                <Field label="Machine / Printer Serial No." hint="POS machine serial number">
+                  <input className="input input-md w-full" placeholder="SN-000000" value={form.machineSerialNo} onChange={set('machineSerialNo')} />
+                </Field>
+              </div>
             </div>
           </div>
         )}
@@ -432,12 +476,74 @@ export default function Settings() {
                 </Field>
               </div>
               <Field label="Default payment method" hint="Pre-selected in the checkout dialog">
-                <select className="select select-md w-full" value={form.defaultPaymentMethod} onChange={set('defaultPaymentMethod')}>
+                <select className="select select-md w-full sm:w-80" value={form.defaultPaymentMethod} onChange={set('defaultPaymentMethod')}>
                   {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
               </Field>
-              <label className="flex items-center gap-3 rounded-xl bg-base-200 p-3">
-                <input type="checkbox" className="checkbox checkbox-primary" checked={form.tipsEnabled} onChange={setChecked('tipsEnabled')} />
+
+              <div className="divider text-xs opacity-50">Checkout behavior</div>
+              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary mt-0.5"
+                  checked={form.autoPrintReceipt}
+                  onChange={setChecked('autoPrintReceipt')}
+                />
+                <div>
+                  <div className="text-sm font-medium">Show receipt after every sale</div>
+                  <div className="text-xs opacity-60">Open the print dialog automatically on checkout completion. Turn off for faster back-to-back selling — receipts stay available in Orders.</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary mt-0.5"
+                  checked={form.openDrawerOnCash}
+                  onChange={setChecked('openDrawerOnCash')}
+                />
+                <div>
+                  <div className="text-sm font-medium">Kick cash drawer on cash payment</div>
+                  <div className="text-xs opacity-60">Send a drawer-open pulse whenever a sale includes cash.</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary mt-0.5"
+                  checked={form.requireCustomer}
+                  onChange={setChecked('requireCustomer')}
+                />
+                <div>
+                  <div className="text-sm font-medium">Require customer at checkout</div>
+                  <div className="text-xs opacity-60">Block completing a sale until a customer is selected. Recommended if you rely on loyalty points.</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary mt-0.5"
+                  checked={form.allowNegativeStock}
+                  onChange={setChecked('allowNegativeStock')}
+                />
+                <div>
+                  <div className="text-sm font-medium">Allow overselling</div>
+                  <div className="text-xs opacity-60">Permit sales beyond available stock — useful for services and made-to-order items.</div>
+                </div>
+              </label>
+
+              <div className="divider text-xs opacity-50">Discounts & tips</div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Max discount (%)" hint="Percentage discounts above this are clamped unless the user is rank 3+">
+                  <input type="number" min="0" max="100" step="1" className="input input-md w-full" value={form.maxDiscountPct} onChange={set('maxDiscountPct')} />
+                </Field>
+              </div>
+              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary mt-0.5"
+                  checked={form.tipsEnabled}
+                  onChange={setChecked('tipsEnabled')}
+                />
                 <div>
                   <div className="text-sm font-medium">Enable tips</div>
                   <div className="text-xs opacity-60">Show tip prompt during checkout</div>
@@ -445,7 +551,7 @@ export default function Settings() {
               </label>
               {form.tipsEnabled && (
                 <Field label="Tip suggestions (%)" hint="Comma-separated percentages">
-                  <input className="input input-md w-full" value={form.tipSuggestions} onChange={set('tipSuggestions')} placeholder="10,15,20" />
+                  <input className="input input-md w-full sm:w-64" value={form.tipSuggestions} onChange={set('tipSuggestions')} placeholder="10,15,20" />
                 </Field>
               )}
             </div>
@@ -455,12 +561,23 @@ export default function Settings() {
         {/* ── Loyalty ── */}
         {activeTab === 'loyalty' && (
           <div className="card bg-base-100 p-6 shadow">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Earn rate" hint="Points per whole currency unit spent">
-                <input type="number" min="0" max="1000" className="input input-md w-full" value={form.loyaltyEarnPerUnit} onChange={set('loyaltyEarnPerUnit')} />
-              </Field>
-              <Field label="Point value (cents)" hint="Value of one point when redeeming">
-                <input type="number" min="1" max="10000" className="input input-md w-full" value={form.loyaltyPointCents} onChange={set('loyaltyPointCents')} />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Earn rate" hint="Points per whole currency unit spent">
+                  <input type="number" min="0" max="1000" className="input input-md w-full" value={form.loyaltyEarnPerUnit} onChange={set('loyaltyEarnPerUnit')} />
+                </Field>
+                <Field label="Point value (cents)" hint="Value of one point when redeeming">
+                  <input type="number" min="1" max="10000" className="input input-md w-full" value={form.loyaltyPointCents} onChange={set('loyaltyPointCents')} />
+                </Field>
+                <Field label="Minimum points to redeem" hint="Customers need this many points before redemption is allowed">
+                  <input type="number" min="0" max="100000" className="input input-md w-full" value={form.loyaltyMinRedeem} onChange={set('loyaltyMinRedeem')} />
+                </Field>
+                <Field label="Max redemption (% of order)" hint="Cap on how much of an order can be paid with points (100 = full payment)">
+                  <input type="number" min="0" max="100" step="1" className="input input-md w-full" value={form.loyaltyMaxRedemptionPct} onChange={set('loyaltyMaxRedemptionPct')} />
+                </Field>
+              </div>
+              <Field label="Points expiry (days)" hint="0 = never expire. Points older than this are voided at redemption time.">
+                <input type="number" min="0" max="3650" className="input input-md w-full sm:w-64" value={form.loyaltyExpiryDays} onChange={set('loyaltyExpiryDays')} />
               </Field>
             </div>
           </div>
@@ -469,9 +586,48 @@ export default function Settings() {
         {/* ── Inventory ── */}
         {activeTab === 'inventory' && (
           <div className="card bg-base-100 p-6 shadow">
-            <Field label="Low-stock alert threshold" hint="Global default — products below this trigger an alert">
-              <input type="number" min="0" max="10000" className="input input-md w-full" value={form.lowStockAlertThreshold} onChange={set('lowStockAlertThreshold')} />
-            </Field>
+            <div className="space-y-4">
+              <Field label="Low-stock alert threshold" hint="Global default — products below this trigger an alert">
+                <input type="number" min="0" max="10000" className="input input-md w-full sm:w-64" value={form.lowStockAlertThreshold} onChange={set('lowStockAlertThreshold')} />
+              </Field>
+              <div className="divider text-xs opacity-50">Stock tracking</div>
+              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary mt-0.5"
+                  checked={form.inventoryStockMode === 'track'}
+                  onChange={(e) => setForm((f) => ({ ...f, inventoryStockMode: e.target.checked ? 'track' : 'none' }))}
+                />
+                <div>
+                  <div className="text-sm font-medium">Track stock levels</div>
+                  <div className="text-xs opacity-60">When off, sales never decrement stock and inventory views act as reference lists only.</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary mt-0.5"
+                  checked={form.inventoryRequireAdjustmentNote}
+                  onChange={setChecked('inventoryRequireAdjustmentNote')}
+                />
+                <div>
+                  <div className="text-sm font-medium">Require note on stock adjustments</div>
+                  <div className="text-xs opacity-60">Staff must state a reason when manually changing stock counts.</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-primary mt-0.5"
+                  checked={form.inventoryAutoReorder}
+                  onChange={setChecked('inventoryAutoReorder')}
+                />
+                <div>
+                  <div className="text-sm font-medium">Flag items for reorder</div>
+                  <div className="text-xs opacity-60">Highlight products at or below their reorder point in inventory views.</div>
+                </div>
+              </label>
+            </div>
           </div>
         )}
 

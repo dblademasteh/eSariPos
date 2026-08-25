@@ -44,7 +44,7 @@ export async function captureError(err, context = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-sentry-envelope',
-        'X-Sentry-Auth': `Sentry sentry_version=7, sentry_key=${key}, sentry_client=novapos/1.0`,
+        'X-Sentry-Auth': `Sentry sentry_version=7, sentry_key=${key}, sentry_client=esaripos/1.0`,
       },
       body: [
         JSON.stringify({ event_id: crypto.randomUUID(), sent_at: new Date().toISOString() }),

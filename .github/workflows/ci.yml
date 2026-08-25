@@ -54,12 +54,24 @@ jobs:
       - name: API smoke tests (node:test)
         run: node --test tests/api/
 
-      # Playwright E2E (browser flows) - enable once specs land:
-      # - name: Install web deps
-      #   working-directory: web
-      #   run: npm ci
-      # - name: Playwright tests
-      #   run: npx playwright test
+      - name: Install web deps
+        working-directory: web
+        run: npm ci
+
+      - name: Build web SPA
+        working-directory: web
+        run: npm run build
+
+      - name: Install Playwright browsers
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright E2E tests
+        working-directory: web
+        run: npx playwright test
+        env:
+          NOVAPOS_URL: http://localhost:4000/api
+          CI: true
 
   web-build:
     runs-on: ubuntu-latest

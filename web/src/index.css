@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+html {
+  font-size: 18px;
+}
+
 @plugin "daisyui/theme" {
   name: "novapos";
   default: true;
@@ -84,9 +88,24 @@
   }
   .print-area {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
     background: white !important;
     color: black !important;
-    padding: 1rem;
+    padding: 0.5rem;
+    overflow: visible !important;
+  }
+  .modal,
+  .modal-box {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    backdrop-filter: none !important;
+    transform: none !important;
+  }
+  .print\:hidden,
+  .modal-action {
+    display: none !important;
   }
 }

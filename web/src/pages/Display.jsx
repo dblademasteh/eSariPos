@@ -37,7 +37,7 @@ export default function Display() {
   return (
     <div className="flex h-screen flex-col bg-neutral-950 text-white">
       <header className="border-b border-neutral-800 px-8 py-4 text-sm uppercase tracking-[0.3em] text-neutral-400">
-        NovaPOS · customer display
+        eSariPOS · customer display
       </header>
       <main className="flex min-h-0 flex-1 flex-col justify-between p-10">
         <ul className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-2">

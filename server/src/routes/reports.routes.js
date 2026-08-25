@@ -280,3 +280,193 @@ reportsRouter.get(
     );
   })
 );
+
+// VAT Summary for BIR Form 2550M/Q filing
+reportsRouter.get(
+  '/vat-summary',
+  asyncHandler(async (req, res) => {
+    const schema = z.object({ from: z.string().datetime(), to: z.string().datetime() });
+    const { from, to } = schema.parse(req.query);
+    const { rows } = await req.q(
+      `SELECT
+        COALESCE(SUM(o.subtotal), 0) AS gross_sales_incl_vat,
+        COALESCE(SUM(o.discount), 0) AS discounts,
+        COALESCE(SUM(o.tax_total), 0) AS output_vat,
+        COALESCE(SUM(o.refunded_total), 0) AS refunds,
+        COUNT(o.id) AS orders,
+        COALESCE(SUM(CASE WHEN o.discount_type IN ('senior','pwd') THEN o.discount ELSE 0 END), 0) AS sc_pwd_discounts,
+        COALESCE(SUM(CASE WHEN o.discount_type NOT IN ('senior','pwd') THEN o.discount ELSE 0 END), 0) AS other_discounts
+       FROM orders o
+       WHERE o.tenant_id = $3
+         AND o.status IN ('completed','partially_refunded','refunded')
+         AND o.created_at >= $1 AND o.created_at < $2`,
+      [new Date(from), new Date(to), req.auth.tid]
+    );
+    const r = rows[0] ?? {};
+    const grossInclVat = Number(r.gross_sales_incl_vat ?? 0);
+    const discounts = Number(r.discounts ?? 0);
+    const outputVat = Number(r.output_vat ?? 0);
+    const scPwdDiscounts = Number(r.sc_pwd_discounts ?? 0);
+    const vatExclusiveSales = grossInclVat - discounts - outputVat;
+    res.json({
+      period: { from, to },
+      grossSalesInclVat: grossInclVat,
+      discounts,
+      scPwdDiscounts,
+      netSalesInclVat: grossInclVat - discounts,
+      vatExclusiveSales: Math.round(vatExclusiveSales * 100) / 100,
+      outputVat,
+      refunds: Number(r.refunds ?? 0),
+      orders: Number(r.orders ?? 0),
+    });
+  })
+);
+
+// SC/PWD Discount Summary report (for BIR audit trail)
+reportsRouter.get(
+  '/sc-pwd-discounts',
+  asyncHandler(async (req, res) => {
+    const schema = z.object({ from: z.string().datetime(), to: z.string().datetime() });
+    const { from, to } = schema.parse(req.query);
+    const { rows } = await req.q(
+      `SELECT o.id, o.order_no, o.created_at, o.discount, o.discount_type,
+              o.beneficiary_name, o.beneficiary_id_number, o.beneficiary_id_type,
+              u.name AS cashier_name
+       FROM orders o
+       LEFT JOIN users u ON u.id = o.created_by
+       WHERE o.tenant_id = $3
+         AND o.discount_type IN ('senior','pwd')
+         AND o.status IN ('completed','partially_refunded','refunded')
+         AND o.created_at >= $1 AND o.created_at < $2
+       ORDER BY o.created_at DESC`,
+      [new Date(from), new Date(to), req.auth.tid]
+    );
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        orderNo: Number(r.order_no),
+        createdAt: r.created_at,
+        discount: Number(r.discount),
+        discountType: r.discount_type,
+        beneficiaryName: r.beneficiary_name,
+        beneficiaryIdNumber: r.beneficiary_id_number,
+        beneficiaryIdType: r.beneficiary_id_type,
+        cashierName: r.cashier_name,
+      }))
+    );
+  })
+);
+
+// Sales breakdown by payment method
+reportsRouter.get(
+  '/by-payment-method',
+  asyncHandler(async (req, res) => {
+    const schema = z.object({ from: z.string().datetime(), to: z.string().datetime() });
+    const { from, to } = schema.parse(req.query);
+    const { rows } = await req.q(
+      `SELECT p.method, COUNT(DISTINCT p.order_id) AS orders, SUM(p.amount) AS total
+       FROM payments p
+       JOIN orders o ON o.id = p.order_id
+       WHERE o.tenant_id = $3
+         AND o.status IN ('completed','partially_refunded','refunded')
+         AND o.created_at >= $1 AND o.created_at < $2
+       GROUP BY p.method ORDER BY total DESC`,
+      [new Date(from), new Date(to), req.auth.tid]
+    );
+    res.json(
+      rows.map((r) => ({
+        method: r.method,
+        orders: Number(r.orders),
+        total: Number(r.total),
+      }))
+    );
+  })
+);
+
+// Sales breakdown by cashier
+reportsRouter.get(
+  '/by-cashier',
+  asyncHandler(async (req, res) => {
+    const schema = z.object({ from: z.string().datetime(), to: z.string().datetime() });
+    const { from, to } = schema.parse(req.query);
+    const { rows } = await req.q(
+      `SELECT u.id AS user_id, u.name AS cashier_name,
+              COUNT(o.id) AS orders,
+              COALESCE(SUM(GREATEST(o.total - o.refunded_total, 0)), 0) AS revenue
+       FROM orders o
+       JOIN users u ON u.id = o.created_by
+       WHERE o.tenant_id = $3
+         AND o.status IN ('completed','partially_refunded','refunded')
+         AND o.created_at >= $1 AND o.created_at < $2
+       GROUP BY u.id, u.name ORDER BY revenue DESC`,
+      [new Date(from), new Date(to), req.auth.tid]
+    );
+    res.json(
+      rows.map((r) => ({
+        userId: r.user_id,
+        cashierName: r.cashier_name,
+        orders: Number(r.orders),
+        revenue: Number(r.revenue),
+      }))
+    );
+  })
+);
+
+// Inventory valuation (stock × cost)
+reportsRouter.get(
+  '/inventory-valuation',
+  asyncHandler(async (req, res) => {
+    const { rows } = await req.q(
+      `SELECT id, name, emoji, sku, stock, cost, (stock * cost) AS value
+       FROM products
+       WHERE is_active
+       ORDER BY value DESC`
+    );
+    const items = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      emoji: r.emoji,
+      sku: r.sku,
+      stock: r.stock,
+      unitCost: Number(r.cost ?? 0),
+      value: Math.round(Number(r.value ?? 0) * 100) / 100,
+    }));
+    const totalValue = items.reduce((s, i) => s + i.value, 0);
+    res.json({ items, totalValue: Math.round(totalValue * 100) / 100 });
+  })
+);
+
+// Cancelled and refunded transaction log
+reportsRouter.get(
+  '/cancelled-refunded',
+  asyncHandler(async (req, res) => {
+    const schema = z.object({ from: z.string().datetime().optional(), to: z.string().datetime().optional() });
+    const { from, to } = schema.parse(req.query);
+    const clauses = [`o.tenant_id = $1`, `o.status IN ('cancelled','refunded','partially_refunded')`];
+    const params = [req.auth.tid];
+    if (from) { params.push(new Date(from)); clauses.push(`o.created_at >= $${params.length}`); }
+    if (to) { params.push(new Date(to)); clauses.push(`o.created_at < $${params.length}`); }
+    const { rows } = await req.q(
+      `SELECT o.id, o.order_no, o.status, o.total, o.refunded_total, o.created_at,
+              u.name AS cashier_name,
+              (SELECT string_agg(r.note, '; ') FROM refunds r WHERE r.order_id = o.id) AS refund_notes
+       FROM orders o
+       LEFT JOIN users u ON u.id = o.created_by
+       WHERE ${clauses.join(' AND ')}
+       ORDER BY o.created_at DESC LIMIT 200`,
+      params
+    );
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        orderNo: Number(r.order_no),
+        status: r.status,
+        total: Number(r.total),
+        refundedTotal: Number(r.refunded_total ?? 0),
+        createdAt: r.created_at,
+        cashierName: r.cashier_name,
+        refundNotes: r.refund_notes,
+      }))
+    );
+  })
+);

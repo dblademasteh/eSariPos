@@ -30,7 +30,11 @@ const LOGIN_SELECT = `
          u.is_active AS user_active, u.totp_enabled,
          t.id AS tid, t.slug, t.name AS tenant_name, t.currency, t.tax_rate,
          t.address, t.phone, t.receipt_footer, t.surcharge_pct, t.cash_rounding,
-         t.is_active AS tenant_active
+         t.is_active AS tenant_active,
+         t.timezone, t.tax_inclusive, t.default_opening_float, t.low_stock_alert_threshold,
+         t.receipt_header, t.logo_url, t.default_payment_method,
+         t.tips_enabled, t.tip_suggestions, t.auto_close_drawer_hours, t.receipt_width,
+         t.tin, t.bir_accreditation_no, t.machine_serial_no
   FROM users u
   JOIN tenants t ON t.id = u.tenant_id
   WHERE t.slug = $1 AND u.email = lower($2)
@@ -55,18 +59,32 @@ function sessionPayload(row) {
     cash_rounding: row.cash_rounding,
     name: row.tenant_name,
     currency: row.currency,
+    timezone: row.timezone,
+    tax_inclusive: row.tax_inclusive,
+    default_opening_float: row.default_opening_float,
+    low_stock_alert_threshold: row.low_stock_alert_threshold,
+    receipt_header: row.receipt_header,
+    logo_url: row.logo_url,
+    default_payment_method: row.default_payment_method,
+    tips_enabled: row.tips_enabled,
+    tip_suggestions: row.tip_suggestions,
+    auto_close_drawer_hours: row.auto_close_drawer_hours,
+    receipt_width: row.receipt_width,
+    tin: row.tin,
+    bir_accreditation_no: row.bir_accreditation_no,
+    machine_serial_no: row.machine_serial_no,
   });
   return { token: signToken(user, tenant), user, tenant };
 }
 
 // ---- httpOnly refresh-cookie sessions (rotating single-use jti) ----
 
-const COOKIE = 'novapos_refresh';
+const COOKIE = 'esaripos_refresh';
 
 function refreshCookieOptions() {
   return {
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/api/auth',
     maxAge: 30 * 24 * 3600 * 1000,
@@ -135,6 +153,20 @@ function tenantOut(t) {
     cashRounding: t.cash_rounding ?? 'none',
     loyaltyPointCents: Number(t.loyalty_point_cents ?? 1),
     loyaltyEarnPerUnit: Number(t.loyalty_earn_per_unit ?? 1),
+    timezone: t.timezone ?? 'UTC',
+    taxInclusive: t.tax_inclusive ?? false,
+    defaultOpeningFloat: Number(t.default_opening_float ?? 100),
+    lowStockAlertThreshold: Number(t.low_stock_alert_threshold ?? 5),
+    receiptHeader: t.receipt_header ?? null,
+    logoUrl: t.logo_url ?? null,
+    defaultPaymentMethod: t.default_payment_method ?? 'cash',
+    tipsEnabled: t.tips_enabled ?? false,
+    tipSuggestions: t.tip_suggestions ?? '10,15,20',
+    autoCloseDrawerHours: Number(t.auto_close_drawer_hours ?? 0),
+    receiptWidth: Number(t.receipt_width ?? 40),
+    tin: t.tin ?? null,
+    birAccreditationNo: t.bir_accreditation_no ?? null,
+    machineSerialNo: t.machine_serial_no ?? null,
   };
 }
 
@@ -258,7 +290,7 @@ authRouter.get(
     ).rows[0];
     const tenant = (
       await req.q(
-        'SELECT id, slug, name, currency, tax_rate, address, phone, receipt_footer, surcharge_pct, cash_rounding, loyalty_earn_per_unit, loyalty_point_cents FROM tenants WHERE id = $1',
+        'SELECT * FROM tenants WHERE id = $1',
         [req.auth.tid]
       )
     ).rows[0];
@@ -277,7 +309,11 @@ authRouter.post(
       `SELECT u.id, u.name, u.email, u.role, u.permissions, u.is_active AS user_active,
               t.id AS tid, t.slug, t.name AS tenant_name, t.currency, t.tax_rate,
               t.address, t.phone, t.receipt_footer, t.surcharge_pct, t.cash_rounding,
-              t.is_active AS tenant_active
+              t.is_active AS tenant_active,
+              t.timezone, t.tax_inclusive, t.default_opening_float, t.low_stock_alert_threshold,
+              t.receipt_header, t.logo_url, t.default_payment_method,
+              t.tips_enabled, t.tip_suggestions, t.auto_close_drawer_hours, t.receipt_width,
+              t.tin, t.bir_accreditation_no, t.machine_serial_no
        FROM users u JOIN tenants t ON t.id = u.tenant_id
        WHERE u.id = $1 LIMIT 1`,
       [userId]
@@ -394,9 +430,9 @@ authRouter.post(
     const slugRow = (await req.q('SELECT slug FROM tenants WHERE id = $1', [req.auth.tid])).rows[0];
     res.json({
       secret,
-      otpauthUri: `otpauth://totp/NovaPOS:${encodeURIComponent(slugRow.slug)}:${encodeURIComponent(
+      otpauthUri: `otpauth://totp/eSariPOS:${encodeURIComponent(slugRow.slug)}:${encodeURIComponent(
         me.email
-      )}?secret=${secret}&issuer=NovaPOS`,
+      )}?secret=${secret}&issuer=eSariPOS`,
     });
   })
 );

@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 
 const ToastContext = createContext(null);
 let counter = 0;
@@ -84,7 +85,7 @@ export function Modal({ open, onClose, title, children, footer, wide }) {
           <div className="mb-4 flex items-center justify-between gap-4">
             <h3 className="text-lg font-bold">{title}</h3>
             <button aria-label="Close dialog" className="btn btn-circle btn-ghost btn-sm" onClick={onClose}>
-              ✕
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
@@ -114,10 +115,10 @@ export function Spinner({ label = 'Loading…' }) {
   );
 }
 
-export function EmptyState({ icon = '🗂️', title, subtitle }) {
+export function EmptyState({ icon, title, subtitle }) {
   return (
     <div className="py-16 text-center">
-      <div className="text-5xl">{icon}</div>
+      <div className="text-5xl">{typeof icon === 'string' ? icon : icon}</div>
       <p className="mt-3 font-semibold">{title}</p>
       {subtitle && <p className="mt-1 text-sm opacity-60">{subtitle}</p>}
     </div>

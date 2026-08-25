@@ -13,6 +13,7 @@ const customerInput = z.object({
   phone: z.string().trim().max(40).optional().nullable().transform(nullifyEmpty),
   email: z.string().trim().email().max(200).optional().nullable().transform(nullifyEmpty),
   note: z.string().trim().max(500).optional().nullable().transform(nullifyEmpty),
+  marketingOptin: z.boolean().optional(),
 });
 
 function serialize(c) {
@@ -24,6 +25,7 @@ function serialize(c) {
     note: c.note,
     loyaltyPoints: Number(c.loyalty_points ?? 0),
     storeCredit: Number(c.store_credit ?? 0),
+    marketingOptin: c.marketing_optin ?? false,
     createdAt: c.created_at,
   };
 }
@@ -83,8 +85,8 @@ customersRouter.post(
   asyncHandler(async (req, res) => {
     const b = customerInput.parse(req.body);
     const { rows } = await req.q(
-      'INSERT INTO customers (tenant_id, name, phone, email, note) VALUES ($1,$2,$3,$4,$5) RETURNING id',
-      [req.auth.tid, b.name, b.phone, b.email, b.note]
+      'INSERT INTO customers (tenant_id, name, phone, email, note, marketing_optin) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+      [req.auth.tid, b.name, b.phone, b.email, b.note, b.marketingOptin ?? false]
     );
     res.status(201).json({ id: rows[0].id });
   })
@@ -94,7 +96,7 @@ customersRouter.patch(
   '/:id',
   asyncHandler(async (req, res) => {
     const b = customerInput.partial().parse(req.body);
-    const upd = toUpdate(b, { name: 'name', phone: 'phone', email: 'email', note: 'note' });
+    const upd = toUpdate(b, { name: 'name', phone: 'phone', email: 'email', note: 'note', marketingOptin: 'marketing_optin' });
     if (!upd) throw new ApiError(400, 'Nothing to update');
     const { rowCount } = await req.q(
       `UPDATE customers SET ${upd.assignments.join(', ')} WHERE id = $${upd.values.length + 1}`,

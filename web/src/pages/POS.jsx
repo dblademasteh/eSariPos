@@ -8,11 +8,10 @@ import { EmptyState, Field, Modal, Spinner, useToast } from '../components/ui.js
 import Receipt from '../components/Receipt.jsx';
 import CashDrawer from '../components/CashDrawer.jsx';
 import { kickCashDrawer } from '../lib/hardware.js';
-
-const EMOJI_FALLBACK = '📦';
+import { Search, Ticket, X, Printer, Banknote, CreditCard, Monitor, Smartphone, Send, CircleDot, QrCode, Landmark } from 'lucide-react';
 
 export default function POS() {
-  const { tenant, user, hasPerm } = useAuth();
+  const { tenant, user, hasPerm, can } = useAuth();
   const toast = useToast();
   const money = makeMoney(tenant?.currency);
 
@@ -22,6 +21,10 @@ export default function POS() {
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState([]);
   const [discount, setDiscount] = useState('');
+  const [discountType, setDiscountType] = useState('regular');
+  const [beneficiaryName, setBeneficiaryName] = useState('');
+  const [beneficiaryIdNumber, setBeneficiaryIdNumber] = useState('');
+  const [beneficiaryIdType, setBeneficiaryIdType] = useState('senior_id');
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [variantParent, setVariantParent] = useState(null);
@@ -49,18 +52,30 @@ export default function POS() {
         id: crypto.randomUUID(),
         ts: Date.now(),
         discount,
+        discountType,
+        beneficiaryName,
+        beneficiaryIdNumber,
+        beneficiaryIdType,
         total: Math.round((total) * 100) / 100,
         lines: cart.map((l) => ({ product: { ...l.product }, qty: l.qty })),
       },
     ]);
     setCart([]);
     setDiscount('');
+    setDiscountType('regular');
+    setBeneficiaryName('');
+    setBeneficiaryIdNumber('');
+    setBeneficiaryIdType('senior_id');
     toast.info('Ticket parked');
   }
 
   function recallTicket(ticket) {
     setCart(ticket.lines);
     setDiscount(ticket.discount ?? '');
+    setDiscountType(ticket.discountType ?? 'regular');
+    setBeneficiaryName(ticket.beneficiaryName ?? '');
+    setBeneficiaryIdNumber(ticket.beneficiaryIdNumber ?? '');
+    setBeneficiaryIdType(ticket.beneficiaryIdType ?? 'senior_id');
     persistHeld(held.filter((h) => h.id !== ticket.id));
     setHeldOpen(false);
   }
@@ -120,16 +135,17 @@ export default function POS() {
 
   function addToCart(product, qty = 1) {
     const eps = 1e-9;
+    const oversell = tenant?.allowNegativeStock === true;
     setCart((c) => {
       const existing = c.find((l) => l.product.id === product.id);
       if (existing) {
-        if (existing.qty + qty > product.stock + eps) {
+        if (!oversell && existing.qty + qty > product.stock + eps) {
           toast.error(`Only ${Number(product.stock)} × ${product.name} in stock`);
           return c;
         }
         return c.map((l) => (l.product.id === product.id ? { ...l, qty: Math.round((l.qty + qty) * 1000) / 1000 } : l));
       }
-      if (qty > product.stock + eps) {
+      if (!oversell && qty > product.stock + eps) {
         toast.error(`Only ${Number(product.stock)} × ${product.name} in stock`);
         return c;
       }
@@ -138,17 +154,30 @@ export default function POS() {
   }
 
   function setQty(productId, qty) {
+    const oversell = tenant?.allowNegativeStock === true;
     setCart((c) =>
       qty <= 0
         ? c.filter((l) => l.product.id !== productId)
         : c.map((l) =>
-            l.product.id === productId ? { ...l, qty: Math.min(qty, Number(l.product.stock)) } : l
+            l.product.id === productId
+              ? { ...l, qty: oversell ? qty : Math.min(qty, Number(l.product.stock)) }
+              : l
           )
     );
   }
 
   const subtotal = cart.reduce((s, l) => s + l.product.price * l.qty, 0);
-  const discountNum = Math.min(Math.max(Number(discount) || 0, 0), subtotal);
+  const isScPwd = discountType === 'senior' || discountType === 'pwd';
+  const maxPct = can(3) ? 100 : Math.min(Math.max(Number(tenant?.maxDiscountPct ?? 100), 0), 100);
+  let discountNum;
+  if (isScPwd) {
+    discountNum = Math.round(subtotal * 20) / 100;
+  } else if (discountType === 'percentage') {
+    const pct = Math.min(Math.max(Number(discount) || 0, 0), maxPct);
+    discountNum = Math.round(subtotal * pct) / 100;
+  } else {
+    discountNum = Math.min(Math.max(Number(discount) || 0, 0), subtotal);
+  }
   const taxRate = Number(tenant?.taxRate ?? 0);
   const taxInclusive = tenant?.taxInclusive ?? false;
 
@@ -167,7 +196,11 @@ export default function POS() {
     setPaymentOpen(false);
     setCart([]);
     setDiscount('');
-    setReceiptOrder(order);
+    setDiscountType('regular');
+    setBeneficiaryName('');
+    setBeneficiaryIdNumber('');
+    setBeneficiaryIdType('senior_id');
+    if (tenant?.autoPrintReceipt !== false) setReceiptOrder(order);
     toast.success(`Sale #${order.orderNo} complete`);
     setProducts((ps) => ps.map((p) => {
       const line = order.items.find((i) => i.productId === p.id);
@@ -175,7 +208,7 @@ export default function POS() {
     }));
     flushQueue().catch(() => {});
     // Kick the cash drawer when cash crossed the counter (best-effort).
-    if ((order.payments ?? []).some((p) => p.method === 'cash')) {
+    if (tenant?.openDrawerOnCash !== false && (order.payments ?? []).some((p) => p.method === 'cash')) {
       kickCashDrawer().catch(() => {});
     }
   }
@@ -184,6 +217,10 @@ export default function POS() {
     setPaymentOpen(false);
     setCart([]);
     setDiscount('');
+    setDiscountType('regular');
+    setBeneficiaryName('');
+    setBeneficiaryIdNumber('');
+    setBeneficiaryIdType('senior_id');
     toast.info('Sale saved offline — it will sync automatically');
   }
 
@@ -244,7 +281,7 @@ export default function POS() {
 
         <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
           {visible.length === 0 ? (
-            <EmptyState icon="🔍" title="No products match" subtitle="Try another search or category." />
+            <EmptyState icon={<Search className="mx-auto h-12 w-12 opacity-30" />} title="No products match" subtitle="Try another search or category." />
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {visible.map((p) => {
@@ -269,7 +306,6 @@ export default function POS() {
                       {inCart > 0 && (
                         <span className="badge badge-primary badge-xs absolute left-2 top-2">{inCart}</span>
                       )}
-                      <span className="text-4xl">{p.emoji || EMOJI_FALLBACK}</span>
                       <span className="line-clamp-2 min-h-8 text-sm font-medium leading-4">{p.name}</span>
                       {p.variantLabel && <span className="text-[10px] uppercase opacity-50">{p.variantLabel}</span>}
                       <span className="text-sm font-bold text-primary">
@@ -292,7 +328,7 @@ export default function POS() {
             <div className="flex items-center gap-1">
               {held.length > 0 && (
                 <button className="btn btn-ghost btn-xs" onClick={() => setHeldOpen(true)}>
-                  🎟️ {held.length}
+                  <Ticket className="h-4 w-4" /> {held.length}
                 </button>
               )}
               {cart.length > 0 && (
@@ -315,7 +351,6 @@ export default function POS() {
             <ul className="max-h-72 space-y-2 overflow-y-auto">
               {cart.map((l) => (
                 <li key={l.product.id} className="flex items-center gap-2 rounded-lg bg-base-200 p-2">
-                  <span className="text-xl">{l.product.emoji}</span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">
                       {l.product.name}
@@ -338,7 +373,7 @@ export default function POS() {
                     />
                   ) : (
                     <div className="join">
-                      <button aria-label="Decrease quantity" className="btn btn-sm join-item min-h-11 min-w-11 px-0" onClick={() => setQty(l.product.id, l.qty - 1)}>−</button>
+                      <button aria-label="Decrease quantity" className="btn btn-sm join-item min-h-11 min-w-11 px-0" onClick={() => setQty(l.product.id, l.qty - 1)}>-</button>
                       <span aria-live="polite" className="btn btn-sm join-item pointer-events-none min-h-11 w-11 px-0 font-mono">{l.qty}</span>
                       <button
                         aria-label="Increase quantity"
@@ -356,26 +391,86 @@ export default function POS() {
             </ul>
           )}
 
-          <div className="form-control">
-            <label className="mb-1 flex items-center justify-between text-sm">
-              <span className="opacity-70">Discount ($)</span>
-              {!hasPerm('discounts') && <span className="badge badge-ghost badge-xs">no permission</span>}
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              className={`input input-sm w-full ${hasPerm('discounts') ? '' : 'input-disabled'}`}
-              placeholder={hasPerm('discounts') ? '0.00' : 'Not allowed'}
-              value={hasPerm('discounts') ? discount : ''}
-              disabled={!hasPerm('discounts')}
-              onChange={(e) => setDiscount(e.target.value)}
-            />
+          <div className="space-y-2">
+            <div className="form-control">
+              <label className="mb-1 flex items-center justify-between text-sm">
+                <span className="opacity-70">Discount type</span>
+                {!hasPerm('discounts') && <span className="badge badge-ghost badge-xs">no permission</span>}
+              </label>
+              <select
+                className={`select select-sm w-full ${hasPerm('discounts') ? '' : 'select-disabled'}`}
+                value={discountType}
+                disabled={!hasPerm('discounts')}
+                onChange={(e) => {
+                  setDiscountType(e.target.value);
+                  setDiscount('');
+                }}
+              >
+                <option value="regular">Regular ($)</option>
+                <option value="senior">Senior Citizen (20%)</option>
+                <option value="pwd">PWD (20%)</option>
+                <option value="percentage">Percentage (%)</option>
+                <option value="employee">Employee discount ($)</option>
+              </select>
+            </div>
+            {discountType !== 'senior' && discountType !== 'pwd' && (
+              <div className="form-control">
+                <label className="mb-1 text-sm opacity-70">
+                  {discountType === 'percentage' ? `Discount (%)${maxPct < 100 ? ` · max ${maxPct}%` : ''}` : 'Discount ($)'}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className={`input input-sm w-full ${hasPerm('discounts') ? '' : 'input-disabled'}`}
+                  placeholder={discountType === 'percentage' ? '0' : '0.00'}
+                  value={discountType === 'percentage' ? discount : (hasPerm('discounts') ? discount : '')}
+                  disabled={!hasPerm('discounts')}
+                  onChange={(e) => setDiscount(e.target.value)}
+                />
+              </div>
+            )}
+            {(discountType === 'senior' || discountType === 'pwd') && (
+              <div className="space-y-2 rounded-xl bg-warning/10 p-2 text-xs">
+                <div className="font-bold text-warning">
+                  {discountType === 'senior' ? 'Senior Citizen' : 'PWD'} — 20% discount + VAT exempt
+                </div>
+                <input
+                  className="input input-xs w-full"
+                  placeholder="Beneficiary full name"
+                  value={beneficiaryName}
+                  onChange={(e) => setBeneficiaryName(e.target.value)}
+                />
+                <div className="flex gap-1">
+                  <select
+                    className="select select-xs w-24"
+                    value={beneficiaryIdType}
+                    onChange={(e) => setBeneficiaryIdType(e.target.value)}
+                  >
+                    <option value="senior_id">Senior ID</option>
+                    <option value="pwd_id">PWD ID</option>
+                    <option value="postal">Postal</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <input
+                    className="input input-xs flex-1"
+                    placeholder="ID number"
+                    value={beneficiaryIdNumber}
+                    onChange={(e) => setBeneficiaryIdNumber(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1 border-t border-base-300 pt-3 text-sm">
             <Row label="Subtotal" value={money(subtotal)} />
-            {discountNum > 0 && <Row label="Discount" value={`-${money(discountNum)}`} />}
+            {discountNum > 0 && (
+              <Row
+                label={isScPwd ? `${discountType === 'senior' ? 'Senior' : 'PWD'} (20%)` : 'Discount'}
+                value={`-${money(discountNum)}`}
+              />
+            )}
             <Row label={`Tax (${taxRate}%)`} value={money(tax)} />
             <div className="flex justify-between pt-1 text-lg font-bold">
               <span>Total</span>
@@ -411,7 +506,7 @@ export default function POS() {
                       handlePick(v);
                     }}
                   >
-                    <span>{v.emoji} {v.variantLabel || v.name}</span>
+                    <span>{v.variantLabel || v.name}</span>
                     <span className="font-bold">{money(v.price)}</span>
                   </button>
                 </li>
@@ -439,6 +534,10 @@ export default function POS() {
         total={total}
         cart={cart}
         discount={discountNum}
+        discountType={discountType}
+        beneficiaryName={beneficiaryName}
+        beneficiaryIdNumber={beneficiaryIdNumber}
+        beneficiaryIdType={beneficiaryIdType}
         onPaid={handlePaid}
         onQueued={handleQueued}
       />
@@ -470,7 +569,7 @@ export default function POS() {
                   className="btn btn-ghost btn-xs text-error"
                   onClick={() => persistHeld(held.filter((x) => x.id !== h.id))}
                 >
-                  ✕
+                  <X className="h-3 w-3" />
                 </button>
               </li>
             ))}
@@ -484,7 +583,7 @@ export default function POS() {
             <Receipt order={receiptOrder} />
             <div className="modal-action print:hidden">
               <button className="btn" onClick={() => window.print()}>
-                🖨️ Print
+                <Printer className="mr-1 inline h-4 w-4" /> Print
               </button>
               <button className="btn btn-primary" onClick={() => setReceiptOrder(null)}>
                 New sale
@@ -555,17 +654,22 @@ function WeightPrompt({ product, money, onClose, onConfirm }) {
 }
 
 const PAYMENT_METHODS = [
-  { value: 'cash', label: '💵 Cash' },
-  { value: 'card', label: '💳 Card' },
-  { value: 'card_terminal', label: '🖥️ Terminal' },
-  { value: 'mobile', label: '📱 Mobile' },
-  { value: 'gift_card', label: '🎟️ Gift card' },
+  { value: 'cash', label: 'Cash', icon: Banknote },
+  { value: 'card', label: 'Card', icon: CreditCard },
+  { value: 'card_terminal', label: 'Terminal', icon: Monitor },
+  { value: 'mobile', label: 'Mobile', icon: Smartphone },
+  { value: 'gcash', label: 'GCash', icon: Send },
+  { value: 'maya', label: 'Maya', icon: CircleDot },
+  { value: 'qr_ph', label: 'QR Ph', icon: QrCode },
+  { value: 'instapay', label: 'InstaPay', icon: Landmark },
+  { value: 'pesonet', label: 'PESONet', icon: Landmark },
+  { value: 'gift_card', label: 'Gift card', icon: Ticket },
 ];
 
 let lineSeq = 0;
 const defaultTenderLine = (method = 'cash') => ({ key: ++lineSeq, method, amount: '', reference: '' });
 
-function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }) {
+function PaymentModal({ open, onClose, total, cart, discount, discountType, beneficiaryName, beneficiaryIdNumber, beneficiaryIdType, onPaid, onQueued }) {
   const { tenant } = useAuth();
   const toast = useToast();
   const money = makeMoney(tenant?.currency);
@@ -629,7 +733,8 @@ function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }
         Number(l.amount) > 0 &&
         (l.method !== 'gift_card' || String(l.reference).trim() !== '')
     );
-  const canComplete = linesValid && remaining <= 0 && (change <= 0 || hasCash);
+  const customerMissing = (tenant?.requireCustomer ?? false) && !customerId;
+  const canComplete = linesValid && !customerMissing && remaining <= 0 && (change <= 0 || hasCash);
   const canLayaway = linesValid && paidNum > 0 && remaining > 0;
 
   async function submit(fulfill) {
@@ -637,6 +742,10 @@ function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }
     const body = {
       items: cart.map((l) => ({ productId: l.product.id, quantity: l.qty })),
       discount,
+      discountType,
+      beneficiaryName: beneficiaryName || null,
+      beneficiaryIdNumber: beneficiaryIdNumber || null,
+      beneficiaryIdType: beneficiaryIdNumber ? beneficiaryIdType : null,
       tip: tipNum,
       fulfill,
       locationId: getLocationId(),
@@ -681,9 +790,9 @@ function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }
     <Modal open={open} onClose={onClose} title={`Collect payment · ${money(grand)}`} wide>
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Field label="Customer">
+          <Field label={customerMissing ? 'Customer · required' : 'Customer'}>
             <select
-              className="select select-sm w-full"
+              className={`select select-sm w-full ${customerMissing ? 'select-error' : ''}`}
               value={customerId}
               onChange={(e) => {
                 setCustomerId(e.target.value);
@@ -799,7 +908,7 @@ function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }
                   =
                 </button>
               </div>
-              {['card', 'card_terminal', 'mobile', 'gift_card'].includes(l.method) && (
+              {['card', 'card_terminal', 'mobile', 'gift_card', 'gcash', 'maya', 'qr_ph', 'instapay', 'pesonet'].includes(l.method) && (
                 <input
                   className="input input-sm w-40"
                   placeholder={l.method === 'gift_card' ? 'Gift card code' : 'Reference'}
@@ -827,7 +936,7 @@ function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }
                   className="btn btn-ghost btn-sm text-error"
                   onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}
                 >
-                  ✕
+                  <X className="h-3 w-3" />
                 </button>
               )}
             </div>

@@ -11,7 +11,7 @@ webhooksRouter.use(requireRole('owner'));
 
 webhooksRouter.get(
   '/',
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
     const { rows } = await req.q(
       `SELECT w.id, w.url, w.events, w.is_active, w.created_at,
               (SELECT count(*) FROM webhook_deliveries d WHERE d.webhook_id = w.id) AS deliveries,

@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { Check, Delete } from 'lucide-react';
 
 // Generic numeric PIN pad (4-8 digits). Used for staff handover and setting
 // one's own register PIN.
-export default function PinPad({ title, onDone, onCancel, confirmLabel = '✓' }) {
+export default function PinPad({ title, onDone, onCancel, confirmLabel = 'Confirm' }) {
   const [digits, setDigits] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -47,7 +48,7 @@ export default function PinPad({ title, onDone, onCancel, confirmLabel = '✓' }
           </button>
         ))}
         <button type="button" className="btn btn-ghost btn-lg" onClick={() => setDigits((v) => v.slice(0, -1))}>
-          ⌫
+          <Delete className="h-5 w-5" />
         </button>
         <button type="button" className="btn btn-lg" onClick={() => press('0')}>
           0

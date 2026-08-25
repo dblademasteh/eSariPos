@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { fmtDateTime, makeMoney } from '../lib/format.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { Field, Modal, useToast } from './ui.jsx';
+import { Printer } from 'lucide-react';
 
 // Cash-drawer sessions. Renders NOTHING on its own — the only entry point is
 // the account-menu item, which links to /pos?drawer=1.
@@ -217,7 +218,7 @@ function ManageDrawerModal({ open, session, money, onClose }) {
           <div className="modal-action print:hidden">
             {isZ && (
               <button className="btn mr-auto" onClick={() => window.print()}>
-                🖨️ Print Z-report
+                <Printer className="mr-1 inline h-4 w-4" /> Print Z-report
               </button>
             )}
             <button className="btn btn-primary" onClick={onClose}>

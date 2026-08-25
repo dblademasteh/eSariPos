@@ -31,6 +31,13 @@ const settingsInput = z.object({
   cashRounding: z.enum(['none', 'step5', 'step10', 'step100']).optional(),
   loyaltyEarnPerUnit: z.number().int().min(0).max(1000).optional(),
   loyaltyPointCents: z.number().int().min(1).max(10000).optional(),
+  loyaltyMinRedeem: z.number().int().min(0).max(100000).optional(),
+  loyaltyMaxRedemptionPct: z.number().min(0).max(100).optional(),
+  loyaltyExpiryDays: z.number().int().min(0).max(3650).optional(),
+
+  inventoryStockMode: z.enum(['track', 'none']).optional(),
+  inventoryRequireAdjustmentNote: z.boolean().optional(),
+  inventoryAutoReorder: z.boolean().optional(),
 
   timezone: z.string().trim().optional(),
   taxInclusive: z.boolean().optional(),
@@ -38,11 +45,21 @@ const settingsInput = z.object({
   lowStockAlertThreshold: z.number().int().min(0).max(10000).optional(),
   receiptHeader: z.string().trim().max(300).optional().nullable(),
   logoUrl: z.string().trim().max(2000).optional().nullable(),
-  defaultPaymentMethod: z.enum(['cash', 'card', 'card_terminal', 'mobile', 'other']).optional(),
+  defaultPaymentMethod: z.enum(['cash', 'card', 'card_terminal', 'mobile', 'gcash', 'maya', 'other']).optional(),
   tipsEnabled: z.boolean().optional(),
   tipSuggestions: z.string().trim().max(50).optional(),
   autoCloseDrawerHours: z.number().int().min(0).max(24).optional(),
   receiptWidth: z.literal(40).or(z.literal(80)).optional(),
+
+  autoPrintReceipt: z.boolean().optional(),
+  openDrawerOnCash: z.boolean().optional(),
+  allowNegativeStock: z.boolean().optional(),
+  maxDiscountPct: z.number().int().min(0).max(100).optional(),
+  requireCustomer: z.boolean().optional(),
+
+  tin: z.string().trim().max(30).optional().nullable(),
+  birAccreditationNo: z.string().trim().max(50).optional().nullable(),
+  machineSerialNo: z.string().trim().max(50).optional().nullable(),
 });
 
 function tenantOut(row) {
@@ -59,6 +76,12 @@ function tenantOut(row) {
     cashRounding: row.cash_rounding ?? 'none',
     loyaltyPointCents: Number(row.loyalty_point_cents ?? 1),
     loyaltyEarnPerUnit: Number(row.loyalty_earn_per_unit ?? 1),
+    loyaltyMinRedeem: Number(row.loyalty_min_redeem ?? 100),
+    loyaltyMaxRedemptionPct: Number(row.loyalty_max_redemption_pct ?? 100),
+    loyaltyExpiryDays: Number(row.loyalty_expiry_days ?? 0),
+    inventoryStockMode: row.inventory_stock_mode ?? 'track',
+    inventoryRequireAdjustmentNote: row.inventory_require_adjustment_note ?? true,
+    inventoryAutoReorder: row.inventory_auto_reorder ?? false,
 
     timezone: row.timezone ?? 'UTC',
     taxInclusive: row.tax_inclusive ?? false,
@@ -71,6 +94,14 @@ function tenantOut(row) {
     tipSuggestions: row.tip_suggestions ?? '10,15,20',
     autoCloseDrawerHours: Number(row.auto_close_drawer_hours ?? 0),
     receiptWidth: Number(row.receipt_width ?? 40),
+    autoPrintReceipt: row.auto_print_receipt ?? true,
+    openDrawerOnCash: row.open_drawer_on_cash ?? true,
+    allowNegativeStock: row.allow_negative_stock ?? false,
+    maxDiscountPct: Number(row.max_discount_pct ?? 100),
+    requireCustomer: row.require_customer ?? false,
+    tin: row.tin ?? null,
+    birAccreditationNo: row.bir_accreditation_no ?? null,
+    machineSerialNo: row.machine_serial_no ?? null,
   };
 }
 
@@ -93,6 +124,12 @@ settingsRouter.patch(
       cashRounding: 'cash_rounding',
       loyaltyEarnPerUnit: 'loyalty_earn_per_unit',
       loyaltyPointCents: 'loyalty_point_cents',
+      loyaltyMinRedeem: 'loyalty_min_redeem',
+      loyaltyMaxRedemptionPct: 'loyalty_max_redemption_pct',
+      loyaltyExpiryDays: 'loyalty_expiry_days',
+      inventoryStockMode: 'inventory_stock_mode',
+      inventoryRequireAdjustmentNote: 'inventory_require_adjustment_note',
+      inventoryAutoReorder: 'inventory_auto_reorder',
       timezone: 'timezone',
       taxInclusive: 'tax_inclusive',
       defaultOpeningFloat: 'default_opening_float',
@@ -104,6 +141,14 @@ settingsRouter.patch(
       tipSuggestions: 'tip_suggestions',
       autoCloseDrawerHours: 'auto_close_drawer_hours',
       receiptWidth: 'receipt_width',
+      autoPrintReceipt: 'auto_print_receipt',
+      openDrawerOnCash: 'open_drawer_on_cash',
+      allowNegativeStock: 'allow_negative_stock',
+      maxDiscountPct: 'max_discount_pct',
+      requireCustomer: 'require_customer',
+      tin: 'tin',
+      birAccreditationNo: 'bir_accreditation_no',
+      machineSerialNo: 'machine_serial_no',
     };
 
     for (const [key, col] of Object.entries(COL_MAP)) {

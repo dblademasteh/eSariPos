@@ -22,8 +22,8 @@ export async function deliverWebhookEvent(tenantId, event, payload) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-NovaPOS-Signature': `sha256=${sig}`,
-            'X-NovaPOS-Event': event,
+            'X-eSariPOS-Signature': `sha256=${sig}`,
+            'X-eSariPOS-Event': event,
           },
           body,
           signal: AbortSignal.timeout(5000),

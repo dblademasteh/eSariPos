@@ -13,7 +13,7 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     // Surface in console too, for copy/paste reports.
-    console.error('[NovaPOS] Render error:', error, info?.componentStack);
+    console.error('[eSariPOS] Render error:', error, info?.componentStack);
   }
 
   render() {

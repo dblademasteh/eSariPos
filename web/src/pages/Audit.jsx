@@ -3,6 +3,7 @@ import { api } from '../api/client.js';
 import { fmtDateTime } from '../lib/format.js';
 import { downloadCsv } from '../lib/export.js';
 import { EmptyState, Spinner } from '../components/ui.jsx';
+import { Download, ScrollText } from 'lucide-react';
 
 export default function Audit() {
   const [entries, setEntries] = useState(null);
@@ -62,7 +63,7 @@ export default function Audit() {
                 ], visible.map((e) => ({ ...e, when: e.createdAt })))
               }
             >
-              ⬇ CSV
+              <Download className="mr-1 inline h-4 w-4" /> CSV
             </button>
           )}
         </div>
@@ -71,7 +72,7 @@ export default function Audit() {
       {!entries ? (
         <Spinner />
       ) : visible.length === 0 ? (
-        <EmptyState icon="📜" title="No audit entries match" />
+        <EmptyState icon={<ScrollText className="mx-auto h-12 w-12 opacity-30" />} title="No audit entries match" />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
           <table className="table">

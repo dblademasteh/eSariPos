@@ -120,6 +120,6 @@ app.use((err, _req, res, _next) => {
 });
 
 app.listen(env.port, () => {
-  console.log(`NovaPOS API listening on http://localhost:${env.port}`);
+  console.log(`eSariPOS API listening on http://localhost:${env.port}`);
   startDigestScheduler();
 });

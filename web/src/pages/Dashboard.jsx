@@ -5,6 +5,7 @@ import { makeMoney, fmtWeekdayShort, tz } from '../lib/format.js';
 import { downloadCsv } from '../lib/export.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { Spinner, useToast } from '../components/ui.jsx';
+import { PartyPopper, TrendingUp, TrendingDown, Download } from 'lucide-react';
 
 const RANGES = [
   { key: 'today', label: 'Today', days: 1 },
@@ -173,7 +174,7 @@ export default function Dashboard() {
                 ], profit)
               }
             >
-              ⬇ CSV
+              <Download className="mr-1 inline h-4 w-4" /> CSV
             </button>
           </div>
           {profit.length === 0 ? (
@@ -194,7 +195,7 @@ export default function Dashboard() {
                 <tbody>
                   {profit.slice(0, 8).map((p) => (
                     <tr key={p.productId}>
-                      <td><span className="mr-2">{p.emoji}</span>{p.name}</td>
+                      <td>{p.name}</td>
                       <td className="text-right font-mono">{p.qty}</td>
                       <td className="text-right">{money(p.revenue)}</td>
                       <td className="text-right opacity-70">{money(p.cogs)}</td>
@@ -214,11 +215,11 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <h2 className="card-title text-base">Low stock</h2>
             <Link to="/products" className="link link-primary link-sm text-sm">
-              Manage products →
+              Manage products -&gt;
             </Link>
           </div>
           {data.lowStock.length === 0 ? (
-            <p className="py-4 text-center text-sm opacity-60">Everything is well stocked 🎉</p>
+            <p className="py-4 text-center text-sm opacity-60">Everything is well stocked <PartyPopper className="inline h-5 w-5 text-primary" /></p>
           ) : (
             <div className="overflow-x-auto">
               <table className="table table-sm mt-2">
@@ -233,7 +234,6 @@ export default function Dashboard() {
                   {data.lowStock.map((p) => (
                     <tr key={p.id}>
                       <td>
-                        <span className="mr-2">{p.emoji}</span>
                         {p.name}
                       </td>
                       <td className="text-right font-mono">{Number(p.stock)}</td>
@@ -263,7 +263,7 @@ function Delta({ compare }) {
   const up = diff > 0;
   return (
     <span className={`text-xs font-semibold ${up ? 'text-success' : 'text-error'}`}>
-      {up ? '▲' : '▼'} {Math.abs(pct ?? 100)}%
+      {up ? <TrendingUp className="inline h-4 w-4 text-success" /> : <TrendingDown className="inline h-4 w-4 text-error" />} {Math.abs(pct ?? 100)}%
       <span className="ml-1 opacity-60">vs prev</span>
     </span>
   );

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client.js';
 import { fmtDateTime, makeMoney } from '../lib/format.js';
 import { useAuth } from '../state/AuthContext.jsx';
+import { Zap, Package, X, Truck, Pencil, ClipboardList, Star, Shuffle } from 'lucide-react';
 import { EmptyState, Field, Modal, Spinner, useToast } from '../components/ui.jsx';
 
 const TABS = ['Purchase orders', 'Suppliers', 'Stock counts', 'Transfers'];
@@ -81,13 +82,13 @@ function PurchaseOrdersTab() {
           ))}
         </select>
         <button className="btn btn-primary btn-sm ml-auto" onClick={() => setCreating(true)}>+ New purchase order</button>
-        <button className="btn btn-outline btn-sm" onClick={loadSuggestions}>⚡ From reorder suggestions</button>
+        <button className="btn btn-outline btn-sm" onClick={loadSuggestions}><Zap className="mr-1 inline h-4 w-4" /> From reorder suggestions</button>
       </div>
 
       {!pos ? (
         <Spinner />
       ) : pos.length === 0 ? (
-        <EmptyState icon="📦" title="No purchase orders" subtitle="Create one manually or from reorder suggestions." />
+        <EmptyState icon={<Package className="mx-auto h-12 w-12 opacity-30" />} title="No purchase orders" subtitle="Create one manually or from reorder suggestions." />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
           <table className="table">
@@ -242,7 +243,7 @@ function POCreateModal({ open, suggestions, onClose, onDone }) {
                 value={l.unitCost}
                 onChange={(e) => setLines((ls) => ls.map((x, i) => (i === idx ? { ...x, unitCost: e.target.value } : x)))} />
               <button className="btn btn-ghost btn-sm text-error"
-                onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}>✕</button>
+                onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}><X className="h-3 w-3" /></button>
             </li>
           ))}
         </ul>
@@ -344,7 +345,7 @@ function SuppliersTab() {
       {!suppliers ? (
         <Spinner />
       ) : suppliers.length === 0 ? (
-        <EmptyState icon="🚚" title="No suppliers yet" />
+        <EmptyState icon={<Truck className="mx-auto h-12 w-12 opacity-30" />} title="No suppliers yet" />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
           <table className="table">
@@ -358,7 +359,7 @@ function SuppliersTab() {
                   <td>{s.email ?? '—'}</td>
                   <td className="text-right">{s.orderCount}</td>
                   <td className="text-right">
-                      <button aria-label={`Edit ${s.name}`} className="btn btn-ghost btn-xs" onClick={() => setEditing(s)}>✏️</button>
+                      <button aria-label={`Edit ${s.name}`} className="btn btn-ghost btn-xs" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -463,7 +464,7 @@ function CountsTab() {
       {!counts ? (
         <Spinner />
       ) : counts.length === 0 ? (
-        <EmptyState icon="📋" title="No counts yet" subtitle="A cycle count snapshots stock so you can audit variances." />
+        <EmptyState icon={<ClipboardList className="mx-auto h-12 w-12 opacity-30" />} title="No counts yet" subtitle="A cycle count snapshots stock so you can audit variances." />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
           <table className="table">
@@ -584,7 +585,6 @@ function CountDetailModal({ open, count, money, onClose, onChanged }) {
         <ul className="max-h-80 space-y-1 overflow-y-auto">
           {visible.map((l) => (
             <li key={l.productId} className="flex items-center gap-3 rounded-lg bg-base-200 p-2 text-sm">
-              <span>{l.emoji}</span>
               <span className="flex-1 truncate">{l.productName}</span>
               <span className="font-mono text-xs opacity-60">sys {r3(l.systemQty)}</span>
               <input
@@ -659,7 +659,7 @@ function TransfersTab() {
           quantity: Number(form.quantity),
         },
       });
-      toast.success(`Moved ${res.quantity} × ${res.productName} → ${res.to}`);
+      toast.success(`Moved ${res.quantity} x ${res.productName} -> ${res.to}`);
       setForm({ productId: '', from: '', to: '', quantity: '' });
       load();
     } catch (err) {
@@ -683,13 +683,13 @@ function TransfersTab() {
             <Field label="From">
               <select className="select select-md w-full" value={form.from} onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))}>
                 <option value="">Main stock</option>
-                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? ' ★' : ''}</option>)}
+                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? <Star className="inline h-3 w-3 fill-current" /> : ''}</option>)}
               </select>
             </Field>
             <Field label="To">
               <select className="select select-md w-full" value={form.to} onChange={(e) => setForm((f) => ({ ...f, to: e.target.value }))}>
                 <option value="">Main stock</option>
-                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? ' ★' : ''}</option>)}
+                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? <Star className="inline h-3 w-3 fill-current" /> : ''}</option>)}
               </select>
             </Field>
           </div>
@@ -705,7 +705,7 @@ function TransfersTab() {
 
       <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
         {history.length === 0 ? (
-          <EmptyState icon="🔀" title="No transfers yet" />
+          <EmptyState icon={<Shuffle className="mx-auto h-12 w-12 opacity-30" />} title="No transfers yet" />
         ) : (
           <table className="table">
             <thead><tr><th>Reference</th><th>Product</th><th className="text-right">Quantity</th><th>When</th></tr></thead>

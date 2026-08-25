@@ -18,7 +18,8 @@ const qtySchema = z
   .max(9999)
   .refine((v) => Math.round(v * 1000) === v * 1000, 'Max 3 decimal places');
 
-const PAYMENT_METHODS = ['cash', 'card', 'card_terminal', 'mobile', 'gift_card', 'store_credit', 'other'];
+const PAYMENT_METHODS = ['cash', 'card', 'card_terminal', 'mobile', 'gift_card', 'store_credit', 'other',
+  'gcash', 'maya', 'qr_ph', 'instapay', 'pesonet'];
 
 const orderSchema = z.object({
   items: z
@@ -35,6 +36,10 @@ const orderSchema = z.object({
   couponCode: z.string().trim().max(40).optional().nullable().transform(nullifyEmpty),
   redeemPoints: z.number().int().min(0).max(1_000_000).default(0),
   discount: z.number().min(0).max(10_000_000).default(0),
+  discountType: z.enum(['regular', 'senior', 'pwd', 'percentage', 'employee']).default('regular'),
+  beneficiaryName: z.string().trim().max(100).optional().nullable().transform(nullifyEmpty),
+  beneficiaryIdNumber: z.string().trim().max(50).optional().nullable().transform(nullifyEmpty),
+  beneficiaryIdType: z.enum(['senior_id', 'pwd_id', 'postal', 'other']).optional().nullable().transform(nullifyEmpty),
   note: z.string().trim().max(500).optional().nullable().transform(nullifyEmpty),
   tip: z.number().min(0).max(10_000).default(0),
   fulfill: z.enum(['now', 'layaway']).default('now'),
@@ -66,7 +71,7 @@ const settleSchema = z.object({
 
 async function loadTenantSettings(req) {
   const { rows } = await req.q(
-    'SELECT tax_rate, surcharge_pct, cash_rounding, loyalty_earn_per_unit, loyalty_point_cents FROM tenants WHERE id = $1',
+    'SELECT tax_rate, surcharge_pct, cash_rounding, loyalty_earn_per_unit, loyalty_point_cents, tin, bir_accreditation_no, machine_serial_no FROM tenants WHERE id = $1',
     [req.auth.tid]
   );
   const t = rows[0] ?? {};
@@ -76,6 +81,9 @@ async function loadTenantSettings(req) {
     cashRounding: t.cash_rounding ?? 'none',
     loyaltyEarnPerUnit: Math.max(Number(t.loyalty_earn_per_unit ?? 1), 0),
     loyaltyPointCents: Math.max(Number(t.loyalty_point_cents ?? 1), 1),
+    tin: t.tin ?? null,
+    birAccreditationNo: t.bir_accreditation_no ?? null,
+    machineSerialNo: t.machine_serial_no ?? null,
   };
 }
 
@@ -83,9 +91,29 @@ function priceOrder(body, settings) {
   let subtotalC = 0;
   for (const l of body.lines) subtotalC += cents(l.p.price) * l.quantity;
 
-  const discountC = Math.min(cents(body.discount ?? 0), subtotalC);
+  const isScPwd = body.discountType === 'senior' || body.discountType === 'pwd';
+
+  let discountC;
+  if (isScPwd) {
+    // SC/PWD: 20% discount, server-enforced, VAT-exempt on discounted portion
+    discountC = Math.round(subtotalC * 20 / 100);
+  } else if (body.discountType === 'percentage') {
+    const pct = Math.min(Math.max(Number(body.discount ?? 0), 0), 100);
+    discountC = Math.round(subtotalC * pct / 100);
+  } else {
+    discountC = Math.min(cents(body.discount ?? 0), subtotalC);
+  }
+
+  let taxC;
+  if (isScPwd) {
+    // SC/PWD: tax only the non-discounted portion (discounted portion is VAT-exempt)
+    const taxableC = subtotalC - discountC;
+    taxC = Math.round((taxableC * settings.taxRate) / 100);
+  } else {
+    const taxableC = subtotalC - discountC;
+    taxC = Math.round((taxableC * settings.taxRate) / 100);
+  }
   const taxableC = subtotalC - discountC;
-  const taxC = Math.round((taxableC * settings.taxRate) / 100);
   const surchargeC = Math.round((taxableC * settings.surchargePct) / 100);
   const tipC = cents(body.tip ?? 0);
 
@@ -180,6 +208,10 @@ async function hydrateOrder(req, orderRow) {
     note: full.note ?? null,
     subtotal: Number(full.subtotal),
     discount: Number(full.discount),
+    discountType: full.discount_type ?? 'regular',
+    beneficiaryName: full.beneficiary_name ?? null,
+    beneficiaryIdNumber: full.beneficiary_id_number ?? null,
+    beneficiaryIdType: full.beneficiary_id_type ?? null,
     taxTotal: Number(full.tax_total),
     surcharge: Number(full.surcharge ?? 0),
     tip: Number(full.tip ?? 0),
@@ -370,7 +402,17 @@ ordersRouter.post(
     let subtotalC = 0;
     for (const l of lines) subtotalC += cents(l.p.price) * l.quantity;
 
-    let discountC = Math.min(cents(body.discount ?? 0), subtotalC);
+    const isScPwd = body.discountType === 'senior' || body.discountType === 'pwd';
+    let discountC;
+    if (isScPwd) {
+      // SC/PWD: 20% discount, server-enforced, no client override
+      discountC = Math.round(subtotalC * 20 / 100);
+    } else if (body.discountType === 'percentage') {
+      const pct = Math.min(Math.max(Number(body.discount ?? 0), 0), 100);
+      discountC = Math.round(subtotalC * pct / 100);
+    } else {
+      discountC = Math.min(cents(body.discount ?? 0), subtotalC);
+    }
     let couponDiscountC = 0;
     if (coupon) {
       const afterManual = Math.max(subtotalC - discountC, 0);
@@ -444,10 +486,11 @@ ordersRouter.post(
       order = (
         await req.q(
           `INSERT INTO orders
-             (tenant_id, customer_id, location_id, session_id, subtotal, discount, tax_total,
-              surcharge, tip, rounding_adjustment, total, status, amount_paid, change_due,
+             (tenant_id, customer_id, location_id, session_id, subtotal, discount, discount_type,
+              beneficiary_name, beneficiary_id_number, beneficiary_id_type,
+              tax_total, surcharge, tip, rounding_adjustment, total, status, amount_paid, change_due,
               note, idempotency_key, created_by, coupon_code, points_redeemed, points_earned)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
            RETURNING *`,
           [
             req.auth.tid,
@@ -456,6 +499,10 @@ ordersRouter.post(
             openSession?.id ?? null,
             fromCents(priced.subtotalC),
             fromCents(discountC),
+            body.discountType ?? 'regular',
+            body.beneficiaryName ?? null,
+            body.beneficiaryIdNumber ?? null,
+            body.beneficiaryIdType ?? null,
             fromCents(priced.taxC),
             fromCents(priced.surchargeC),
             fromCents(priced.tipC),
@@ -534,7 +581,7 @@ ordersRouter.post(
       const { sendMail } = await import('../lib/mailer.js');
       void sendMail({
         to: customer.email,
-        subject: `Your receipt #${order.order_no} · NovaPOS`,
+        subject: `Your receipt #${order.order_no} · eSariPOS`,
         text: `Thanks for your visit! Order #${order.order_no} total ${fromCents(priced.totalC)}.`,
       }).catch(() => {});
     }

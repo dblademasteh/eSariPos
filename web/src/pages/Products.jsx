@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { makeMoney } from '../lib/format.js';
 import { useAuth } from '../state/AuthContext.jsx';
-import { EmptyState, Field, Modal, RoleBadge, Spinner, useToast } from '../components/ui.jsx';
-
-const EMOJI_CHOICES = ['☕️', '🍵', '🥐', '🧁', '🍩', '🍪', '🍞', '🍫', '🥤', '🧊', '🍶', '👜', '🫘', '📦'];
+import { EmptyState, Field, Modal, Spinner, useToast } from '../components/ui.jsx';
+import { Tag, Pencil, FlaskConical, X, Save, Trash2, ArrowUpDown, Layers } from 'lucide-react';
 
 export default function Products() {
   const { tenant, can } = useAuth();
@@ -72,7 +71,7 @@ export default function Products() {
           {manage && (
             <>
               <button className="btn btn-outline btn-sm" onClick={() => setCatsOpen(true)}>
-                🏷️ Categories
+                <Tag className="mr-1 inline h-4 w-4" /> Categories
               </button>
               <button className="btn btn-primary btn-sm" onClick={() => setEditing({})}>
                 + New product
@@ -85,7 +84,7 @@ export default function Products() {
       {!products ? (
         <Spinner />
       ) : filtered.length === 0 ? (
-        <EmptyState icon="📦" title="No products yet" subtitle={manage ? 'Create your first product.' : 'Ask a manager to add products.'} />
+        <EmptyState icon={<Package className="mx-auto h-12 w-12 opacity-30" />} title="No products yet" subtitle={manage ? 'Create your first product.' : 'Ask a manager to add products.'} />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
           <table className="table">
@@ -104,7 +103,6 @@ export default function Products() {
                 <tr key={p.id} className={!p.isActive ? 'opacity-50' : ''}>
                   <td>
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl">{p.emoji}</span>
                       <div>
                         <div className="font-medium">
                           {p.name}
@@ -148,10 +146,10 @@ export default function Products() {
                   {manage && (
                     <td className="text-right whitespace-nowrap">
                       <button aria-label={`Edit ${p.name}`} className="btn btn-ghost btn-xs" onClick={() => setEditing(p)}>
-                        ✏️
+                        <Pencil className="h-4 w-4" />
                       </button>
                       <button aria-label={`Adjust stock for ${p.name}`} className="btn btn-ghost btn-xs" onClick={() => setAdjusting(p)}>
-                        ±
+                        <ArrowUpDown className="h-4 w-4" />
                       </button>
                       {!p.parentId && (
                         <>
@@ -161,7 +159,7 @@ export default function Products() {
                             className="btn btn-ghost btn-xs"
                             onClick={() => setRecipesFor(p)}
                           >
-                            🧪
+                            <FlaskConical className="h-4 w-4" />
                           </button>
                           <button
                             aria-label={`Add variant of ${p.name}`}
@@ -169,7 +167,7 @@ export default function Products() {
                             className="btn btn-ghost btn-xs"
                             onClick={() => setEditing({ __variantOf: p })}
                           >
-                            ⧉
+                            <Layers className="h-4 w-4" />
                           </button>
                         </>
                       )}
@@ -247,7 +245,6 @@ function ProductModal({ open, product, categories, products, onClose, onSaved })
         name: variantOf ? '' : product?.name ?? '',
         sku: product?.sku ?? '',
         barcode: product?.barcode ?? '',
-        emoji: variantOf?.emoji ?? product?.emoji ?? '📦',
         categoryId: variantOf?.categoryId ?? product?.categoryId ?? '',
         price: product?.price ?? '',
         cost: product?.cost ?? 0,
@@ -275,7 +272,6 @@ function ProductModal({ open, product, categories, products, onClose, onSaved })
         name: form.name,
         sku: form.sku || null,
         barcode: form.barcode || null,
-        emoji: form.emoji,
         categoryId: form.categoryId || null,
         price: Number(form.price),
         cost: Number(form.cost),
@@ -303,23 +299,6 @@ function ProductModal({ open, product, categories, products, onClose, onSaved })
   return (
     <Modal open={open} onClose={onClose} title={isNew ? 'New product' : `Edit ${product.name}`}>
       <form onSubmit={save} className="space-y-3">
-        <Field label="Emoji">
-          <div className="flex flex-wrap gap-1">
-            {EMOJI_CHOICES.map((e) => (
-              <button
-                type="button"
-                key={e}
-                onClick={() => setForm((f) => ({ ...f, emoji: e }))}
-                className={`rounded-lg border px-2 py-1 text-xl ${
-                  form.emoji === e ? 'border-primary bg-primary/10' : 'border-base-300'
-                }`}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        </Field>
-
         <Field label="Name">
           <input className="input input-md w-full" value={form.name} onChange={set('name')} required autoFocus />
         </Field>
@@ -527,7 +506,7 @@ function RecipeModal({ open, product, products, onClose }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`🧪 Recipe · ${product.name}`} wide>
+    <Modal open={open} onClose={onClose} title={`<FlaskConical className="h-5 w-5" /> Recipe · ${product.name}`} wide>
       <div className="space-y-3">
         <p className="text-xs opacity-60">
           Composite products are not stocked themselves — selling one deducts these ingredients instead.
@@ -540,7 +519,6 @@ function RecipeModal({ open, product, products, onClose }) {
             <ul className="space-y-2">
               {components.map((c) => (
                 <li key={c.componentId} className="flex items-center gap-2 rounded-lg bg-base-200 p-2 text-sm">
-                  <span>{c.emoji}</span>
                   <span className="flex-1 truncate font-medium">{c.name}</span>
                   <span className="font-mono text-xs opacity-50">stock {Number(c.stock)}</span>
                   <input
@@ -557,7 +535,7 @@ function RecipeModal({ open, product, products, onClose }) {
                     className="btn btn-ghost btn-xs text-error"
                     onClick={() => save(components.filter((x) => x.componentId !== c.componentId))}
                   >
-                    ✕
+                    <X className="h-3 w-3" />
                   </button>
                 </li>
               ))}
@@ -695,10 +673,10 @@ function CategoriesModal({ open, onClose, onChanged }) {
                 />
                 <span className="whitespace-nowrap text-xs opacity-50">{cat.productCount} products</span>
                 <button className="btn btn-ghost btn-xs" onClick={() => update(cat)}>
-                  💾
+                  <Save className="h-4 w-4" />
                 </button>
                 <button className="btn btn-ghost btn-xs text-error" onClick={() => remove(cat)}>
-                  🗑️
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </li>
             ))}

@@ -5,6 +5,7 @@ import { downloadCsv } from '../lib/export.js';
 import { PERM_KEYS, PERM_LABELS } from '../lib/perms.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { Field, Modal, RoleBadge, Spinner, useToast } from '../components/ui.jsx';
+import { Check, Pencil, Hash, Download } from 'lucide-react';
 import PinPad from '../components/PinPad.jsx';
 
 export default function Staff() {
@@ -74,7 +75,7 @@ export default function Staff() {
                   <td>
                     <span className="text-xs opacity-70">
                       {s.perms.length ? s.perms.join(', ') : 'sell only'}
-                      {s.hasPin && ' · PIN ✓'}
+                      {s.hasPin && <><span className="mx-1">·</span>PIN <Check className="inline h-3 w-3 text-success" /></>}
                     </span>
                   </td>
                   <td>
@@ -98,7 +99,7 @@ export default function Staff() {
                   </td>
                   <td className="text-right">
                     <button aria-label={`Edit ${s.name}`} className="btn btn-ghost btn-xs" onClick={() => setEditing(s)}>
-                      ✏️
+                       <Pencil className="h-4 w-4" />
                     </button>
                     {!s.hasPin && (
                       <button
@@ -117,7 +118,7 @@ export default function Staff() {
                           }
                         }}
                       >
-                        #️⃣
+                        <Hash className="h-4 w-4" />
                       </button>
                     )}
                   </td>
@@ -143,7 +144,7 @@ export default function Staff() {
                 ], report.shifts)
               }
             >
-              ⬇ CSV
+              <Download className="mr-1 inline h-4 w-4" /> CSV
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -164,7 +165,7 @@ export default function Staff() {
                       <td className="font-medium">{t.name}</td>
                       <td>{t.shifts}</td>
                       <td className="text-right font-mono">{t.hours}</td>
-                      <td className="text-xs opacity-60">{last ? `${fmtDateTime(last.clockIn)} → ${fmtDateTime(last.clockOut)}` : '—'}</td>
+                       <td className="text-xs opacity-60">{last ? `${fmtDateTime(last.clockIn)} -> ${fmtDateTime(last.clockOut)}` : '—'}</td>
                     </tr>
                   );
                 })}

@@ -4,6 +4,7 @@ import { fmtDateTime, makeMoney } from '../lib/format.js';
 import { downloadCsv } from '../lib/export.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { EmptyState, Field, Modal, Spinner, useToast } from '../components/ui.jsx';
+import { Users, Pencil, Download } from 'lucide-react';
 
 const STATUS_BADGES = {
   completed: 'badge-success',
@@ -62,7 +63,7 @@ export default function Customers() {
                 }
               }}
             >
-              ⬇ Marketing CSV
+              <Download className="mr-1 inline h-4 w-4" /> Marketing CSV
             </button>
           )}
           <button className="btn btn-primary btn-sm" onClick={() => setEditing({})}>+ Add customer</button>
@@ -72,7 +73,7 @@ export default function Customers() {
       {!customers ? (
         <Spinner />
       ) : customers.length === 0 ? (
-        <EmptyState icon="👥" title="No customers yet" />
+        <EmptyState icon={<Users className="mx-auto h-12 w-12 opacity-30" />} title="No customers yet" />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
           <table className="table">
@@ -97,7 +98,7 @@ export default function Customers() {
                       className="btn btn-ghost btn-xs"
                       onClick={(e) => { e.stopPropagation(); setEditing(c); }}
                     >
-                      ✏️
+                      <Pencil className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
@@ -127,6 +128,7 @@ function CustomerModal({ open, customer, onClose, onSaved }) {
         phone: customer?.phone ?? '',
         email: customer?.email ?? '',
         note: customer?.note ?? '',
+        marketingOptin: customer?.marketingOptin ?? false,
       });
     }
   }, [open, customer]);
@@ -154,6 +156,13 @@ function CustomerModal({ open, customer, onClose, onSaved }) {
           <Field label="Email" hint="Used for e-receipts"><input type="email" className="input input-md w-full" value={form.email} onChange={set('email')} /></Field>
         </div>
         <Field label="Note"><input className="input input-md w-full" value={form.note} onChange={set('note')} /></Field>
+        <label className="flex items-center gap-3 rounded-xl bg-base-200 p-3">
+          <input type="checkbox" className="checkbox checkbox-primary" checked={form.marketingOptin} onChange={(e) => setForm((f) => ({ ...f, marketingOptin: e.target.checked }))} />
+          <div>
+            <div className="text-sm font-medium">Email marketing opt-in</div>
+            <div className="text-xs opacity-60">Customer consents to receiving promotional emails</div>
+          </div>
+        </label>
         <div className="modal-action">
           <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary">Save</button>
@@ -209,6 +218,11 @@ function ProfileModal({ id, money, canTopup, onClose, onChanged }) {
             <Stat label="Store credit" value={money(data.storeCredit)} />
             <Stat label="Visits" value={data.stats.visits} />
             <Stat label="Lifetime value" value={money(data.stats.lifetimeValue)} />
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className={`badge badge-xs ${data.marketingOptin ? 'badge-success' : 'badge-ghost'}`}>
+              {data.marketingOptin ? 'Email opted in' : 'Not opted in'}
+            </span>
           </div>
 
           {canTopup && (
@@ -297,7 +311,7 @@ function CouponsCard() {
                 <td className="font-mono font-medium">{c.code}</td>
                 <td className="text-right font-semibold">{c.percentOff}%</td>
                 <td className="text-xs opacity-60">
-                  {c.startsAt ? `${new Date(c.startsAt).toLocaleDateString()} → ` : ''}
+                  {c.startsAt ? `${new Date(c.startsAt).toLocaleDateString()} -> ` : ''}
                   {c.endsAt ? new Date(c.endsAt).toLocaleDateString() : 'no end'}
                 </td>
                 <td className="text-right font-mono">{c.timesUsed}{c.maxUses ? ` / ${c.maxUses}` : ''}</td>
