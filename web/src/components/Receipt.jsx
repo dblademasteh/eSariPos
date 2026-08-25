@@ -9,6 +9,8 @@ export default function Receipt({ order }) {
   return (
     <div className="print-area rounded-xl bg-base-100 p-4 font-mono text-sm">
       <div className="text-center">
+        {tenant?.logoUrl && <img src={tenant.logoUrl} alt="Logo" className="mx-auto mb-2 h-12 w-auto object-contain" />}
+        {tenant?.receiptHeader && <div className="mb-1 text-xs opacity-70">{tenant.receiptHeader}</div>}
         <div className="text-lg font-bold">{tenant?.name}</div>
         {tenant?.address && <div className="text-xs opacity-70">{tenant.address}</div>}
         {tenant?.phone && <div className="text-xs opacity-70">{tenant.phone}</div>}

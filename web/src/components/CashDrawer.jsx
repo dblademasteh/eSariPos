@@ -45,16 +45,17 @@ export default function CashDrawer() {
 }
 
 function OpenDrawerModal({ open, onClose }) {
+  const { tenant } = useAuth();
   const toast = useToast();
-  const [float, setFloat] = useState('100.00');
+  const [float, setFloat] = useState(String(tenant?.defaultOpeningFloat ?? 100));
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setFloat('100.00');
+      setFloat(String(tenant?.defaultOpeningFloat ?? 100));
       setBusy(false);
     }
-  }, [open]);
+  }, [open, tenant?.defaultOpeningFloat]);
 
   async function submitOpen() {
     setBusy(true);

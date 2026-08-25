@@ -59,23 +59,25 @@ export function startDigestScheduler() {
   started = true;
 
   async function runDue() {
-    const now = new Date();
-    if (now.getHours() < 6) return;
     const tenants = await adminPool.query(
-      `SELECT DISTINCT t.id, t.slug
+      `SELECT DISTINCT t.id, t.slug, t.timezone
        FROM tenants t JOIN users u ON u.tenant_id = t.id AND u.role = 'owner' AND u.is_active`
     );
     for (const tenant of tenants.rows) {
       try {
+        const tz = tenant.timezone || 'UTC';
+        // Check if it's past 06:00 in the tenant's timezone
+        const hourInTz = new Date().toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
+        if (Number(hourInTz) < 6) continue;
         const already = await adminPool.query(
           `SELECT 1 FROM audit_log
            WHERE tenant_id = $1 AND action = 'digest.sent'
-             AND created_at >= date_trunc('day', now()) LIMIT 1`,
-          [tenant.id]
+             AND created_at >= date_trunc('day', now() AT TIME ZONE $2) LIMIT 1`,
+          [tenant.id, tz]
         );
         if (already.rowCount) continue;
 
-        const summary = await computeDailySummary(adminPool, tenant.id, 'UTC', 1);
+        const summary = await computeDailySummary(adminPool, tenant.id, tz, 1);
         const owners = await adminPool.query(
           `SELECT email FROM users WHERE tenant_id = $1 AND role = 'owner' AND is_active`,
           [tenant.id]

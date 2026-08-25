@@ -150,8 +150,18 @@ export default function POS() {
   const subtotal = cart.reduce((s, l) => s + l.product.price * l.qty, 0);
   const discountNum = Math.min(Math.max(Number(discount) || 0, 0), subtotal);
   const taxRate = Number(tenant?.taxRate ?? 0);
-  const tax = Math.round(((subtotal - discountNum) * taxRate * 100) / 100) / 100;
-  const total = Math.max(subtotal - discountNum + tax, 0);
+  const taxInclusive = tenant?.taxInclusive ?? false;
+
+  let tax, total;
+  if (taxInclusive) {
+    // Prices include tax — extract the tax portion
+    tax = Math.round(((subtotal - discountNum) * taxRate) / (100 + taxRate) * 100) / 100;
+    total = Math.max(subtotal - discountNum, 0);
+  } else {
+    // Standard: tax added on top
+    tax = Math.round(((subtotal - discountNum) * taxRate * 100) / 100) / 100;
+    total = Math.max(subtotal - discountNum + tax, 0);
+  }
 
   async function handlePaid(order) {
     setPaymentOpen(false);
@@ -553,13 +563,16 @@ const PAYMENT_METHODS = [
 ];
 
 let lineSeq = 0;
-const newTenderLine = () => ({ key: ++lineSeq, method: 'cash', amount: '', reference: '' });
+const defaultTenderLine = (method = 'cash') => ({ key: ++lineSeq, method, amount: '', reference: '' });
 
 function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }) {
   const { tenant } = useAuth();
   const toast = useToast();
   const money = makeMoney(tenant?.currency);
-  const [lines, setLines] = useState([newTenderLine()]);
+  const defaultMethod = tenant?.defaultPaymentMethod ?? 'cash';
+  const tipsEnabled = tenant?.tipsEnabled ?? false;
+  const tipSuggestions = (tenant?.tipSuggestions ?? '10,15,20').split(',').map((s) => Number(s.trim())).filter((n) => n > 0);
+  const [lines, setLines] = useState([defaultTenderLine(defaultMethod)]);
   const [tip, setTip] = useState('0');
   const [busy, setBusy] = useState(false);
   const [idemKey, setIdemKey] = useState(null);
@@ -571,7 +584,7 @@ function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }
 
   useEffect(() => {
     if (open) {
-      setLines([newTenderLine()]);
+      setLines([defaultTenderLine(defaultMethod)]);
       setTip('0');
       setIdemKey(crypto.randomUUID());
       setCustomerId('');
@@ -721,34 +734,36 @@ function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }
           </Field>
         </div>
 
-        <div>
-          <span className="mb-1 block text-sm opacity-70">Tip</span>
-          <div className="flex flex-wrap items-center gap-2">
-            {[0, 5, 10, 15].map((pct) => {
-              const pctAmount = (total * pct) / 100;
-              const active = Math.abs(tipNum - pctAmount) < 0.005;
-              return (
-                <button
-                  key={pct}
-                  type="button"
-                  className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline'}`}
-                  onClick={() => setTip(pctAmount.toFixed(2))}
-                >
-                  {pct === 0 ? 'No tip' : `${pct}%`}
-                </button>
-              );
-            })}
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              className="input input-sm w-28 text-right"
-              placeholder="Custom"
-              value={tip}
-              onChange={(e) => setTip(e.target.value)}
-            />
+        {tipsEnabled && (
+          <div>
+            <span className="mb-1 block text-sm opacity-70">Tip</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {[0, ...tipSuggestions].map((pct) => {
+                const pctAmount = (total * pct) / 100;
+                const active = Math.abs(tipNum - pctAmount) < 0.005;
+                return (
+                  <button
+                    key={pct}
+                    type="button"
+                    className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => setTip(pctAmount.toFixed(2))}
+                  >
+                    {pct === 0 ? 'No tip' : `${pct}%`}
+                  </button>
+                );
+              })}
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="input input-sm w-28 text-right"
+                placeholder="Custom"
+                value={tip}
+                onChange={(e) => setTip(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="space-y-2">
           <span className="block text-sm font-medium opacity-80">Tender</span>
@@ -821,7 +836,7 @@ function PaymentModal({ open, onClose, total, cart, discount, onPaid, onQueued }
             <button
               type="button"
               className="btn btn-ghost btn-sm"
-              onClick={() => setLines((ls) => [...ls, newTenderLine()])}
+              onClick={() => setLines((ls) => [...ls, defaultTenderLine(defaultMethod)])}
             >
               + Split across another payment
             </button>
