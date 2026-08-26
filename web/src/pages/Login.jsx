@@ -60,7 +60,7 @@ export default function Login() {
       }
       login(data);
       toast.success(mode === 'signin' ? `Welcome back, ${data.user.name.split(' ')[0]}!` : 'Business created — welcome aboard!');
-      navigate('/');
+      navigate(mode === 'signin' && data.tenant?.setupCompleted ? '/' : '/setup');
     } catch (err) {
       const detail = Array.isArray(err.details) && err.details.length
         ? err.details[0].message

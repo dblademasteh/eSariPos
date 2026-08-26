@@ -12,12 +12,13 @@ import GiftCards from './pages/GiftCards.jsx';
 import Inventory from './pages/Inventory.jsx';
 import Audit from './pages/Audit.jsx';
 import Display from './pages/Display.jsx';
+import SetupWizard from './pages/SetupWizard.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { useAuth } from './state/AuthContext.jsx';
 
 function Protected({ children, perm, minRank }) {
-  const { token, hasPerm, can } = useAuth();
-  if (!token) return <Navigate to="/login" replace />;
+  const { user, hasPerm, can } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
   if (perm && !hasPerm(perm)) return <Navigate to="/" replace />;
   if (minRank && !can(minRank)) return <Navigate to="/" replace />;
   return children;
@@ -25,7 +26,8 @@ function Protected({ children, perm, minRank }) {
 
 // Cashiers land on the register; everyone else sees the dashboard.
 function HomeGate() {
-  const { hasPerm } = useAuth();
+  const { hasPerm, tenant } = useAuth();
+  if (tenant && !tenant.setupCompleted) return <Navigate to="/setup" replace />;
   return hasPerm('reports') ? <Dashboard /> : <Navigate to="/pos" replace />;
 }
 
@@ -34,6 +36,14 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/display" element={<Display />} />
+      <Route
+        path="/setup"
+        element={
+          <Protected>
+            <SetupWizard />
+          </Protected>
+        }
+      />
       <Route element={<Protected><ErrorBoundary><Layout /></ErrorBoundary></Protected>}>
         <Route index element={<HomeGate />} />
         <Route path="pos" element={<POS />} />

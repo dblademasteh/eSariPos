@@ -1,11 +1,4 @@
-let authToken = null;
 let onUnauthorized = null;
-
-export const setAuthToken = (v) => {
-  authToken = v;
-};
-
-export const getAuthToken = () => authToken;
 
 export const setOnUnauthorized = (fn) => {
   onUnauthorized = fn;
@@ -30,10 +23,8 @@ export async function refreshSession() {
     });
     if (!res.ok) return null;
     const data = await res.json();
-    if (data?.token) {
-      authToken = data.token;
-      return data;
-    }
+    // Access token is now set as httpOnly cookie by the server
+    return data;
   } catch {
     // offline - fall through
   }
@@ -44,7 +35,6 @@ export async function logoutRequest() {
   try {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
   } catch {}
-  authToken = null;
 }
 
 export async function api(path, { method = 'GET', body, query } = {}) {
@@ -54,7 +44,6 @@ export async function api(path, { method = 'GET', body, query } = {}) {
       credentials: 'include',
       headers: {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
     });

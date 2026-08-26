@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { env } from '../env.js';
 import { ApiError, asyncHandler } from '../lib/api.js';
-import { signToken, requireAuth, withTenantSession, hashToken } from '../middleware/auth.js';
+import { signToken, requireAuth, withTenantSession, hashToken, setAccessCookie, clearAccessCookie } from '../middleware/auth.js';
 import { adminPool } from '../db/pool.js';
 import { generateSecret, verifyTotp } from '../lib/totp.js';
 import { resolvePerms } from '../lib/permissions.js';
@@ -34,7 +34,12 @@ const LOGIN_SELECT = `
          t.timezone, t.tax_inclusive, t.default_opening_float, t.low_stock_alert_threshold,
          t.receipt_header, t.logo_url, t.default_payment_method,
          t.tips_enabled, t.tip_suggestions, t.auto_close_drawer_hours, t.receipt_width,
-         t.tin, t.bir_accreditation_no, t.machine_serial_no
+         t.tin, t.bir_accreditation_no, t.machine_serial_no,
+         t.loyalty_min_redeem, t.loyalty_max_redemption_pct, t.loyalty_expiry_days,
+         t.inventory_stock_mode, t.inventory_require_adjustment_note, t.inventory_auto_reorder,
+         t.auto_print_receipt, t.open_drawer_on_cash, t.allow_negative_stock,
+         t.max_discount_pct, t.require_customer,
+         t.setup_completed
   FROM users u
   JOIN tenants t ON t.id = u.tenant_id
   WHERE t.slug = $1 AND u.email = lower($2)
@@ -73,8 +78,20 @@ function sessionPayload(row) {
     tin: row.tin,
     bir_accreditation_no: row.bir_accreditation_no,
     machine_serial_no: row.machine_serial_no,
+    loyalty_min_redeem: row.loyalty_min_redeem,
+    loyalty_max_redemption_pct: row.loyalty_max_redemption_pct,
+    loyalty_expiry_days: row.loyalty_expiry_days,
+    inventory_stock_mode: row.inventory_stock_mode,
+    inventory_require_adjustment_note: row.inventory_require_adjustment_note,
+    inventory_auto_reorder: row.inventory_auto_reorder,
+    auto_print_receipt: row.auto_print_receipt,
+    open_drawer_on_cash: row.open_drawer_on_cash,
+    allow_negative_stock: row.allow_negative_stock,
+    max_discount_pct: row.max_discount_pct,
+    require_customer: row.require_customer,
+    setup_completed: row.setup_completed,
   });
-  return { token: signToken(user, tenant), user, tenant };
+  return { user, tenant, token: signToken(user, tenant) };
 }
 
 // ---- httpOnly refresh-cookie sessions (rotating single-use jti) ----
@@ -153,6 +170,12 @@ function tenantOut(t) {
     cashRounding: t.cash_rounding ?? 'none',
     loyaltyPointCents: Number(t.loyalty_point_cents ?? 1),
     loyaltyEarnPerUnit: Number(t.loyalty_earn_per_unit ?? 1),
+    loyaltyMinRedeem: Number(t.loyalty_min_redeem ?? 100),
+    loyaltyMaxRedemptionPct: Number(t.loyalty_max_redemption_pct ?? 100),
+    loyaltyExpiryDays: Number(t.loyalty_expiry_days ?? 0),
+    inventoryStockMode: t.inventory_stock_mode ?? 'track',
+    inventoryRequireAdjustmentNote: t.inventory_require_adjustment_note ?? true,
+    inventoryAutoReorder: t.inventory_auto_reorder ?? false,
     timezone: t.timezone ?? 'UTC',
     taxInclusive: t.tax_inclusive ?? false,
     defaultOpeningFloat: Number(t.default_opening_float ?? 100),
@@ -164,9 +187,15 @@ function tenantOut(t) {
     tipSuggestions: t.tip_suggestions ?? '10,15,20',
     autoCloseDrawerHours: Number(t.auto_close_drawer_hours ?? 0),
     receiptWidth: Number(t.receipt_width ?? 40),
+    autoPrintReceipt: t.auto_print_receipt ?? true,
+    openDrawerOnCash: t.open_drawer_on_cash ?? true,
+    allowNegativeStock: t.allow_negative_stock ?? false,
+    maxDiscountPct: Number(t.max_discount_pct ?? 100),
+    requireCustomer: t.require_customer ?? false,
     tin: t.tin ?? null,
     birAccreditationNo: t.bir_accreditation_no ?? null,
     machineSerialNo: t.machine_serial_no ?? null,
+    setupCompleted: t.setup_completed ?? false,
   };
 }
 
@@ -189,7 +218,9 @@ authRouter.post(
       return res.json({ twoFactorRequired: true, preToken });
     }
     await issueRefreshCookie(res, row.id);
-    res.json(sessionPayload(row));
+    const { user, tenant, token } = sessionPayload(row);
+    setAccessCookie(res, token);
+    res.json({ user, tenant });
   })
 );
 
@@ -214,7 +245,16 @@ authRouter.post(
               u.totp_enabled, u.totp_secret,
               t.id AS tid, t.slug, t.name AS tenant_name, t.currency, t.tax_rate,
               t.address, t.phone, t.receipt_footer, t.surcharge_pct, t.cash_rounding,
-              t.is_active AS tenant_active
+              t.is_active AS tenant_active,
+              t.timezone, t.tax_inclusive, t.default_opening_float, t.low_stock_alert_threshold,
+              t.receipt_header, t.logo_url, t.default_payment_method,
+              t.tips_enabled, t.tip_suggestions, t.auto_close_drawer_hours, t.receipt_width,
+              t.tin, t.bir_accreditation_no, t.machine_serial_no,
+              t.loyalty_min_redeem, t.loyalty_max_redemption_pct, t.loyalty_expiry_days,
+              t.inventory_stock_mode, t.inventory_require_adjustment_note, t.inventory_auto_reorder,
+              t.auto_print_receipt, t.open_drawer_on_cash, t.allow_negative_stock,
+              t.max_discount_pct, t.require_customer,
+              t.setup_completed
        FROM users u JOIN tenants t ON t.id = u.tenant_id
        WHERE u.id = $1 LIMIT 1`,
       [payload.sub]
@@ -227,7 +267,9 @@ authRouter.post(
       throw new ApiError(401, 'Invalid authentication code');
     }
     await issueRefreshCookie(res, row.id);
-    res.json(sessionPayload(row));
+    const { user, tenant, token } = sessionPayload(row);
+    setAccessCookie(res, token);
+    res.json({ user, tenant });
   })
 );
 
@@ -268,7 +310,9 @@ authRouter.post(
       };
       const tenantFull = tenantOut(tenant);
       await issueRefreshCookie(res, user.id);
-      res.status(201).json({ token: signToken(userFull, tenantFull), user: userFull, tenant: tenantFull });
+      const token = signToken(userFull, tenantFull);
+      setAccessCookie(res, token);
+      res.status(201).json({ user: userFull, tenant: tenantFull });
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {});
       throw err;
@@ -313,7 +357,12 @@ authRouter.post(
               t.timezone, t.tax_inclusive, t.default_opening_float, t.low_stock_alert_threshold,
               t.receipt_header, t.logo_url, t.default_payment_method,
               t.tips_enabled, t.tip_suggestions, t.auto_close_drawer_hours, t.receipt_width,
-              t.tin, t.bir_accreditation_no, t.machine_serial_no
+              t.tin, t.bir_accreditation_no, t.machine_serial_no,
+              t.loyalty_min_redeem, t.loyalty_max_redemption_pct, t.loyalty_expiry_days,
+              t.inventory_stock_mode, t.inventory_require_adjustment_note, t.inventory_auto_reorder,
+              t.auto_print_receipt, t.open_drawer_on_cash, t.allow_negative_stock,
+              t.max_discount_pct, t.require_customer,
+              t.setup_completed
        FROM users u JOIN tenants t ON t.id = u.tenant_id
        WHERE u.id = $1 LIMIT 1`,
       [userId]
@@ -321,7 +370,9 @@ authRouter.post(
     const row = rows[0];
     if (!row || !row.user_active) throw new ApiError(401, 'Account unavailable');
     await issueRefreshCookie(res, userId); // rotate single-use jti
-    res.json(sessionPayload(row));
+    const { user, tenant, token } = sessionPayload(row);
+    setAccessCookie(res, token);
+    res.json({ user, tenant });
   })
 );
 
@@ -335,6 +386,7 @@ authRouter.post(
       // already signed out / bad cookie - still clear it
     }
     res.clearCookie(COOKIE, { path: '/api/auth' });
+    clearAccessCookie(res);
     res.json({ ok: true });
   })
 );
@@ -373,7 +425,16 @@ authRouter.post(
               u.is_active AS user_active,
               t.id AS tid, t.slug, t.name AS tenant_name, t.currency, t.tax_rate,
               t.address, t.phone, t.receipt_footer, t.surcharge_pct, t.cash_rounding,
-              t.is_active AS tenant_active
+              t.is_active AS tenant_active,
+              t.timezone, t.tax_inclusive, t.default_opening_float, t.low_stock_alert_threshold,
+              t.receipt_header, t.logo_url, t.default_payment_method,
+              t.tips_enabled, t.tip_suggestions, t.auto_close_drawer_hours, t.receipt_width,
+              t.tin, t.bir_accreditation_no, t.machine_serial_no,
+              t.loyalty_min_redeem, t.loyalty_max_redemption_pct, t.loyalty_expiry_days,
+              t.inventory_stock_mode, t.inventory_require_adjustment_note, t.inventory_auto_reorder,
+              t.auto_print_receipt, t.open_drawer_on_cash, t.allow_negative_stock,
+              t.max_discount_pct, t.require_customer,
+              t.setup_completed
        FROM users u JOIN tenants t ON t.id = u.tenant_id
        WHERE u.id = $1 AND u.tenant_id = $2 LIMIT 1`,
       [b.targetUserId, req.auth.tid]
@@ -386,7 +447,9 @@ authRouter.post(
       throw new ApiError(401, 'Incorrect PIN');
     }
     await issueRefreshCookie(res, row.id);
-    res.json(sessionPayload(row));
+    const { user, tenant, token } = sessionPayload(row);
+    setAccessCookie(res, token);
+    res.json({ user, tenant });
   })
 );
 

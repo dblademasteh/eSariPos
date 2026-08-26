@@ -3,6 +3,8 @@
 
 html {
   font-size: 18px;
+  font-family: 'Inter', sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 @plugin "daisyui/theme" {

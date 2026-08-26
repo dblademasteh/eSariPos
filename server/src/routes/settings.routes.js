@@ -60,6 +60,7 @@ const settingsInput = z.object({
   tin: z.string().trim().max(30).optional().nullable(),
   birAccreditationNo: z.string().trim().max(50).optional().nullable(),
   machineSerialNo: z.string().trim().max(50).optional().nullable(),
+  setupCompleted: z.boolean().optional(),
 });
 
 function tenantOut(row) {
@@ -102,6 +103,7 @@ function tenantOut(row) {
     tin: row.tin ?? null,
     birAccreditationNo: row.bir_accreditation_no ?? null,
     machineSerialNo: row.machine_serial_no ?? null,
+    setupCompleted: row.setup_completed ?? false,
   };
 }
 
@@ -149,6 +151,7 @@ settingsRouter.patch(
       tin: 'tin',
       birAccreditationNo: 'bir_accreditation_no',
       machineSerialNo: 'machine_serial_no',
+      setupCompleted: 'setup_completed',
     };
 
     for (const [key, col] of Object.entries(COL_MAP)) {

@@ -1,4 +1,4 @@
-import { api, getAuthToken } from '../api/client.js';
+import { api } from '../api/client.js';
 
 const DB_NAME = 'novapos';
 const STORE = 'queuedSales';
@@ -108,12 +108,11 @@ export async function retrySale(id) {
 export function flushQueue() {
   if (flushing) return Promise.resolve({ synced: 0 });
   flushing = true;
-  async function run() {
-    let synced = 0;
-    for (;;) {
-      if (!getAuthToken()) break;
-      const next = (await listQueued()).find((r) => r.status !== 'failed');
-      if (!next) break;
+    async function run() {
+      let synced = 0;
+      for (;;) {
+        const next = (await listQueued()).find((r) => r.status !== 'failed');
+        if (!next) break;
       try {
         await api('/orders', { method: 'POST', body: next.payload });
         await removeSale(next.id);

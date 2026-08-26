@@ -5,6 +5,8 @@ import { ApiError } from '../lib/api.js';
 import { env } from '../env.js';
 import { resolvePerms } from '../lib/permissions.js';
 
+const ACCESS_COOKIE = 'esaripos_access';
+
 // Short-lived access token; the long-lived session lives in an httpOnly
 // refresh cookie (see auth.routes.js) and rotates on every refresh.
 export function signToken(user, tenant) {
@@ -15,7 +17,32 @@ export function signToken(user, tenant) {
   );
 }
 
+export function setAccessCookie(res, token) {
+  res.cookie(ACCESS_COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 30 * 60 * 1000, // 30 minutes
+  });
+}
+
+export function clearAccessCookie(res) {
+  res.clearCookie(ACCESS_COOKIE, { path: '/' });
+}
+
 export const hashToken = (v) => crypto.createHash('sha256').update(v).digest('hex');
+
+function readTokenFromRequest(req) {
+  // Prefer httpOnly cookie
+  const header = req.headers.cookie || '';
+  const pair = header.split(/;\s*/).find((c) => c.startsWith(`${ACCESS_COOKIE}=`));
+  if (pair) return decodeURIComponent(pair.slice(ACCESS_COOKIE.length + 1));
+  // Fallback: Authorization header (for API keys, external clients)
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Bearer ')) return authHeader.slice(7);
+  return null;
+}
 
 export function requireAuth(req, res, next) {
   // Public API key path (X-Api-Key) - resolved against adminPool because RLS
@@ -45,8 +72,7 @@ export function requireAuth(req, res, next) {
       .catch(() => next(new ApiError(401, 'Invalid API key')));
     return;
   }
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const token = readTokenFromRequest(req);
   if (!token) return next(new ApiError(401, 'Authentication required'));
   try {
     const payload = jwt.verify(token, env.jwtSecret);

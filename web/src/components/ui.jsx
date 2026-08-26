@@ -1,16 +1,120 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Check, Info, AlertTriangle } from 'lucide-react';
 
 const ToastContext = createContext(null);
 let counter = 0;
 
+const TYPE_CONFIG = {
+  success: {
+    icon: Check,
+    bg: 'bg-success/10 border-success/20',
+    iconColor: 'text-success',
+    barColor: 'bg-success',
+  },
+  error: {
+    icon: X,
+    bg: 'bg-error/10 border-error/20',
+    iconColor: 'text-error',
+    barColor: 'bg-error',
+  },
+  info: {
+    icon: Info,
+    bg: 'bg-info/10 border-info/20',
+    iconColor: 'text-info',
+    barColor: 'bg-info',
+  },
+  warning: {
+    icon: AlertTriangle,
+    bg: 'bg-warning/10 border-warning/20',
+    iconColor: 'text-warning',
+    barColor: 'bg-warning',
+  },
+};
+
+function ToastItem({ id, message, type, onDismiss }) {
+  const [progress, setProgress] = useState(100);
+  const [exiting, setExiting] = useState(false);
+  const cfg = TYPE_CONFIG[type] || TYPE_CONFIG.info;
+  const Icon = cfg.icon;
+  const duration = type === 'error' ? 5000 : 3500;
+
+  useEffect(() => {
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      setProgress(remaining);
+      if (remaining > 0) requestAnimationFrame(tick);
+    };
+    const raf = requestAnimationFrame(tick);
+    const timer = setTimeout(() => {
+      setExiting(true);
+      setTimeout(() => onDismiss(id), 200);
+    }, duration);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
+  }, [id, duration, onDismiss]);
+
+  function handleClose() {
+    setExiting(true);
+    setTimeout(() => onDismiss(id), 200);
+  }
+
+  return (
+    <div
+      role={type === 'error' ? 'alert' : 'status'}
+      className={`
+        relative overflow-hidden rounded-xl border bg-base-100 shadow-xl
+        transition-all duration-200 ease-out
+        ${cfg.bg}
+        ${exiting ? 'translate-x-[110%] opacity-0' : 'translate-x-0 opacity-100'}
+      `}
+      style={{ minWidth: '320px', maxWidth: '420px' }}
+    >
+      <div className="flex items-start gap-3 p-3">
+        {/* Icon */}
+        <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-base-200`}>
+          <Icon className={`h-3.5 w-3.5 ${cfg.iconColor}`} strokeWidth={2.5} />
+        </div>
+
+        {/* Message */}
+        <p className="flex-1 pt-0.5 text-sm font-medium leading-snug text-base-content">
+          {message}
+        </p>
+
+        {/* Close */}
+        <button
+          onClick={handleClose}
+          className="btn btn-ghost btn-xs btn-circle shrink-0 opacity-40 hover:opacity-100"
+          aria-label="Dismiss"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-0.5 w-full bg-base-300/30">
+        <div
+          className={`h-full rounded-full transition-none ${cfg.barColor}`}
+          style={{ width: `${progress}%`, opacity: 0.6 }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
+  const dismiss = useCallback((id) => {
+    setToasts((t) => t.filter((x) => x.id !== id));
+  }, []);
+
   const push = useCallback((message, type) => {
     const id = ++counter;
-    setToasts((t) => [...t, { id, message, type }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500);
+    setToasts((t) => [...t.slice(-4), { id, message, type }]);
   }, []);
 
   const toast = useMemo(
@@ -18,6 +122,7 @@ export function ToastProvider({ children }) {
       success: (m) => push(m, 'success'),
       error: (m) => push(m, 'error'),
       info: (m) => push(m, 'info'),
+      warning: (m) => push(m, 'warning'),
     }),
     [push]
   );
@@ -25,15 +130,9 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="toast toast-end z-[999]" role="status" aria-live="polite">
+      <div className="fixed bottom-4 right-4 z-[999] flex flex-col-reverse gap-2" aria-live="polite">
         {toasts.map((t) => (
-          <div
-            key={t.id}
-            role={t.type === 'error' ? 'alert' : undefined}
-            className={`alert alert-${t.type} shadow-lg py-2 text-sm`}
-          >
-            <span>{t.message}</span>
-          </div>
+          <ToastItem key={t.id} {...t} onDismiss={dismiss} />
         ))}
       </div>
     </ToastContext.Provider>

@@ -1,0 +1,1 @@
+ALTER ROLE pos_app NOBYPASSRLS;

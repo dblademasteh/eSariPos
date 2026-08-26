@@ -12,7 +12,7 @@ import {
   BarChart3, Banknote, Package, Truck, Receipt, Users, Ticket, IdCard,
   ScrollText, Settings, Clock, Menu, Monitor, Moon, ArrowRightLeft, Hash,
   LogOut, MapPin, RotateCw, X, WifiOff, Loader, CloudOff, Check,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, User,
 } from 'lucide-react';
 
 const NAV_SECTIONS = [
@@ -369,6 +369,29 @@ export default function Layout() {
             );
           })}
         </nav>
+
+        {/* My Profile */}
+        <div className="border-t border-base-300 px-2 py-3">
+          <button
+            onClick={() => navigate('/settings?tab=security')}
+            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors w-full text-base-content/70 hover:bg-base-300/50 hover:text-base-content ${
+              collapsed ? 'justify-center' : ''
+            }`}
+            title={collapsed ? 'My Profile' : undefined}
+          >
+            <div className="placeholder avatar">
+              <div className="w-6 rounded-full bg-primary/15 text-primary ring-1 ring-primary/20">
+                <span className="text-[10px] font-semibold uppercase leading-6">{user?.name?.[0]}</span>
+              </div>
+            </div>
+            {!collapsed && (
+              <div className="min-w-0 flex-1 text-left">
+                <div className="truncate text-sm font-medium">{user?.name}</div>
+                <div className="truncate text-[10px] opacity-50">{user?.email}</div>
+              </div>
+            )}
+          </button>
+        </div>
       </aside>
 
       {/* ── Main column ── */}
@@ -438,13 +461,8 @@ export default function Layout() {
 
             {/* User menu */}
             <div className="dropdown dropdown-end">
-              <button aria-label="Account menu" className="btn btn-ghost btn-sm gap-2 px-2" tabIndex={0}>
-                <div className="placeholder avatar">
-                  <div className="w-8 rounded-full bg-primary/15 text-primary ring-1 ring-primary/20">
-                    <span className="text-xs font-semibold uppercase leading-8">{user?.name?.[0]}</span>
-                  </div>
-                </div>
-                <span className="hidden text-[13px] font-medium sm:inline">{user?.name}</span>
+              <button aria-label="Account menu" className="btn btn-ghost btn-sm btn-circle" tabIndex={0}>
+                <User className="h-4 w-4" />
               </button>
               <ul className="menu dropdown-content z-50 mt-2 w-56 rounded-xl bg-base-100 p-2 shadow-lg">
                 <li className="menu-title flex-row items-center justify-between gap-2">

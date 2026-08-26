@@ -1,0 +1,1 @@
+ALTER TABLE tenants ADD COLUMN setup_completed boolean NOT NULL DEFAULT false;

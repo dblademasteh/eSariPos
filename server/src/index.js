@@ -8,7 +8,7 @@ import { env } from './env.js';
 import { ApiError } from './lib/api.js';
 import { logger, requestLogger, captureError } from './lib/logger.js';
 import { requireAuth, withTenantSession } from './middleware/auth.js';
-import { authRateLimit, globalRateLimit } from './middleware/rateLimit.js';
+import { authRateLimit, globalRateLimit, registrationRateLimit } from './middleware/rateLimit.js';
 import { authRouter } from './routes/auth.routes.js';
 import { productsRouter } from './routes/products.routes.js';
 import { categoriesRouter } from './routes/categories.routes.js';
@@ -57,7 +57,7 @@ app.use(requestLogger);
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use(globalRateLimit);
 app.use('/api/auth/login', authRateLimit);
-app.use('/api/auth/register', authRateLimit);
+app.use('/api/auth/register', authRateLimit, registrationRateLimit);
 app.use('/api/auth', authRouter);
 
 const guarded = express.Router();

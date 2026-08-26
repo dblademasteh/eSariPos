@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { api, setAuthToken, getAuthToken, refreshSession, logoutRequest, setOnUnauthorized } from '../api/client.js';
+import { api, refreshSession, logoutRequest, setOnUnauthorized } from '../api/client.js';
 
 const PROFILE_KEY = 'novapos.profile';
 const AuthContext = createContext(null);
@@ -15,13 +15,8 @@ function readProfile() {
 }
 
 export function AuthProvider({ children }) {
-  // The access token lives in memory only; the browser keeps an httpOnly
-  // refresh cookie that silently restores the session on boot.
   const [session, setSession] = useState(() => {
     const profile = readProfile();
-    if (profile) {
-      setAuthToken('pending-refresh'); // optimistic; replaced on boot refresh
-    }
     return profile;
   });
 
@@ -30,11 +25,10 @@ export function AuthProvider({ children }) {
     (async () => {
       const data = await refreshSession();
       if (!alive) return;
-      if (data?.token && data?.user) {
+      if (data?.user) {
         localStorage.setItem(PROFILE_KEY, JSON.stringify({ user: data.user, tenant: data.tenant }));
         setSession({ user: data.user, tenant: data.tenant });
       } else {
-        setAuthToken(null);
         localStorage.removeItem(PROFILE_KEY);
         setSession(null);
       }
@@ -47,13 +41,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setOnUnauthorized(() => {
       localStorage.removeItem(PROFILE_KEY);
-      setAuthToken(null);
       window.location.href = '/login';
     });
   }, []);
 
   const login = useCallback((data) => {
-    setAuthToken(data.token);
+    // Access token is set as httpOnly cookie by the server
     localStorage.setItem(
       PROFILE_KEY,
       JSON.stringify({ user: data.user, tenant: data.tenant })
@@ -81,7 +74,6 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      token: getAuthToken(),
       user: session?.user ?? null,
       tenant: session?.tenant ?? null,
       login,
