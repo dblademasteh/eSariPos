@@ -137,7 +137,7 @@ export default function Staff() {
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-bold">Time clock · last 30 days</h2>
             <button
-              className="btn btn-outline btn-sm"
+              className="btn-outline btn-sm"
               onClick={() =>
                 downloadCsv(`timeclock-30d`, [
                   { key: 'staffName', label: 'Staff' },
@@ -151,7 +151,7 @@ export default function Staff() {
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="table table-sm">
+            <table className="table-counter table-sm">
               <thead>
                 <tr>
                   <th>Staff</th>
@@ -314,7 +314,7 @@ function StaffModal({ open, staff, onClose, onSaved, onPin }) {
 
             <div className="grid grid-cols-[1fr_auto] items-end gap-2 rounded-xl border border-base-300 p-3">
               <Field label="Register PIN (for fast handover)" hint="4-8 digits · leave blank to keep current">
-                <input inputMode="numeric" pattern="\d*" maxLength={8} className="input input-md w-full font-mono" placeholder="••••" value={form.pin} onChange={set('pin')} />
+                <input inputMode="numeric" pattern="\d*" maxLength={8} className="input-field input-md w-full font-mono" placeholder="••••" value={form.pin} onChange={set('pin')} />
               </Field>
               {staff.hasPin && (
                 <button

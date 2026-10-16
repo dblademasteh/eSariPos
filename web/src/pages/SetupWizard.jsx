@@ -167,7 +167,7 @@ function StepReceipt({ data, onChange, onNext, onBack }) {
       <div className="divider text-xs opacity-40">BIR Compliance (Philippines)</div>
       <Field label="TIN (Tax Identification Number)">
         <input
-          className="input input-md w-full font-mono"
+          className="input-field input-md w-full font-mono"
           placeholder="123-456-789-000"
           value={data.tin}
           onChange={(e) => onChange({ tin: e.target.value })}
@@ -175,7 +175,7 @@ function StepReceipt({ data, onChange, onNext, onBack }) {
       </Field>
       <Field label="BIR Accreditation No.">
         <input
-          className="input input-md w-full font-mono"
+          className="input-field input-md w-full font-mono"
           placeholder="000000000000"
           value={data.birAccreditationNo}
           onChange={(e) => onChange({ birAccreditationNo: e.target.value })}
@@ -183,7 +183,7 @@ function StepReceipt({ data, onChange, onNext, onBack }) {
       </Field>
       <Field label="Machine Serial No.">
         <input
-          className="input input-md w-full font-mono"
+          className="input-field input-md w-full font-mono"
           placeholder="0000000000"
           value={data.machineSerialNo}
           onChange={(e) => onChange({ machineSerialNo: e.target.value })}

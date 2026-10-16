@@ -244,7 +244,7 @@ function POCreateModal({ open, suggestions, onClose, onDone }) {
 
         {lines.length === 0 && (
           <button
-            className="btn btn-outline text-ink border-line hover:bg-panel hover:text-ink btn-sm"
+            className="btn-outline btn-sm text-ink border-line hover:bg-panel hover:text-ink"
             onClick={() => setLines([{ productId: '', quantity: '', unitCost: '' }])}
           >
             Add first line
@@ -320,7 +320,7 @@ function ReceiveModal({ open, po, money, onClose, onDone }) {
             <div key={l.id} className="flex items-center gap-3 rounded-lg bg-panel p-2 text-sm">
               <span className="flex-1 truncate font-medium text-ink">{l.productName}</span>
               <span className="text-xs text-mute">ordered {l.quantity} · got {l.receivedQty} · {money(l.unitCost)}</span>
-              <input type="number" min="0" max={remaining} step="0.001" className="input input-sm w-24 text-right text-ink"
+              <input type="number" min="0" max={remaining} step="0.001" className="input-field input-sm w-24 text-right text-ink"
                 value={qtys[l.id] ?? 0}
                 onChange={(e) => setQtys((q) => ({ ...q, [l.id]: Math.min(Math.max(Number(e.target.value) || 0, 0), remaining) }))} />
             </div>
@@ -433,12 +433,12 @@ function SupplierModal({ open, supplier, onClose, onDone }) {
   return (
     <Modal open={open} onClose={onClose} title={isNew ? 'Add supplier' : `Edit ${supplier.name}`}>
       <div className="space-y-3">
-        <Field label="Name"><input className="input input-md w-full text-ink" value={form.name} onChange={set('name')} autoFocus /></Field>
+        <Field label="Name"><input className="input-field input-md w-full text-ink" value={form.name} onChange={set('name')} autoFocus /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Contact person"><input className="input input-md w-full text-ink" value={form.contactName} onChange={set('contactName')} /></Field>
-          <Field label="Phone"><input className="input input-md w-full text-ink" value={form.phone} onChange={set('phone')} /></Field>
+          <Field label="Contact person"><input className="input-field input-md w-full text-ink" value={form.contactName} onChange={set('contactName')} /></Field>
+          <Field label="Phone"><input className="input-field input-md w-full text-ink" value={form.phone} onChange={set('phone')} /></Field>
         </div>
-        <Field label="Email"><input type="email" className="input input-md w-full text-ink" value={form.email} onChange={set('email')} /></Field>
+        <Field label="Email"><input type="email" className="input-field input-md w-full text-ink" value={form.email} onChange={set('email')} /></Field>
         <div className="modal-action">
           <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>Cancel</button>
           <button className="btn-cta" disabled={!form.name.trim()} onClick={save}>Save</button>

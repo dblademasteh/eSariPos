@@ -32,7 +32,7 @@ export default class ErrorBoundary extends React.Component {
               Try again
             </button>
             <button
-              className="btn btn-outline"
+              className="btn-outline"
               onClick={() => window.location.reload()}
             >
               Full reload

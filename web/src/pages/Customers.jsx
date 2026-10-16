@@ -153,12 +153,12 @@ function CustomerModal({ open, customer, onClose, onSaved }) {
   return (
     <Modal open={open} onClose={onClose} title={isNew ? 'Add customer' : `Edit ${customer.name}`}>
       <form onSubmit={save} className="space-y-3">
-        <Field label="Name"><input className="input input-md w-full text-ink" value={form.name} onChange={set('name')} required autoFocus /></Field>
+        <Field label="Name"><input className="input-field input-md w-full text-ink" value={form.name} onChange={set('name')} required autoFocus /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Phone"><input className="input input-md w-full text-ink" value={form.phone} onChange={set('phone')} /></Field>
-          <Field label="Email" hint="Used for e-receipts"><input type="email" className="input input-md w-full text-ink" value={form.email} onChange={set('email')} /></Field>
+          <Field label="Phone"><input className="input-field input-md w-full text-ink" value={form.phone} onChange={set('phone')} /></Field>
+          <Field label="Email" hint="Used for e-receipts"><input type="email" className="input-field input-md w-full text-ink" value={form.email} onChange={set('email')} /></Field>
         </div>
-        <Field label="Note"><input className="input input-md w-full text-ink" value={form.note} onChange={set('note')} /></Field>
+        <Field label="Note"><input className="input-field input-md w-full text-ink" value={form.note} onChange={set('note')} /></Field>
         <label className="flex items-center gap-3 rounded-lg bg-panel p-3 text-ink">
           <input type="checkbox" className="checkbox-field checkbox-sm" checked={form.marketingOptin} onChange={(e) => setForm((f) => ({ ...f, marketingOptin: e.target.checked }))} />
           <div>
@@ -380,21 +380,21 @@ function CouponCreateModal({ open, onClose, onDone }) {
     <Modal open={open} onClose={onClose} title="New coupon">
       <div className="space-y-3">
         <Field label="Code">
-          <input className="input input-md w-full font-data text-ink uppercase" placeholder="WELCOME10" value={form.code}
+          <input className="input-field input-md w-full font-data text-ink uppercase" placeholder="WELCOME10" value={form.code}
             onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} autoFocus />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="% off">
-            <input type="number" min="0.01" max="100" step="0.01" className="input input-md w-full text-ink" value={form.percentOff}
+            <input type="number" min="0.01" max="100" step="0.01" className="input-field input-md w-full text-ink" value={form.percentOff}
               onChange={(e) => setForm((f) => ({ ...f, percentOff: e.target.value }))} />
           </Field>
           <Field label="Max uses" hint="Blank = unlimited">
-            <input type="number" min="1" className="input input-md w-full text-ink" value={form.maxUses}
+            <input type="number" min="1" className="input-field input-md w-full text-ink" value={form.maxUses}
               onChange={(e) => setForm((f) => ({ ...f, maxUses: e.target.value }))} />
           </Field>
         </div>
         <Field label="Ends at" hint="Optional expiry">
-          <input type="date" className="input input-md w-full text-ink" value={form.endsAt}
+          <input type="date" className="input-field input-md w-full text-ink" value={form.endsAt}
             onChange={(e) => setForm((f) => ({ ...f, endsAt: e.target.value }))} />
         </Field>
         <div className="modal-action">

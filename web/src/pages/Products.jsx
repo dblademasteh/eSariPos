@@ -305,10 +305,10 @@ function ProductModal({ open, product, categories, products, onClose, onSaved })
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="SKU">
-            <input className="input input-md w-full font-data text-ink" value={form.sku} onChange={set('sku')} />
+            <input className="input-field input-md w-full font-data text-ink" value={form.sku} onChange={set('sku')} />
           </Field>
           <Field label="Barcode">
-            <input className="input input-md w-full font-data text-ink" value={form.barcode} onChange={set('barcode')} />
+            <input className="input-field input-md w-full font-data text-ink" value={form.barcode} onChange={set('barcode')} />
           </Field>
         </div>
 
@@ -523,7 +523,7 @@ function RecipeModal({ open, product, products, onClose }) {
                   <span className="font-data text-xs text-mute">stock {Number(c.stock)}</span>
                   <input
                     type="number" min="0" step="0.001"
-                    className="input input-sm w-24 text-right text-ink"
+                    className="input-field input-sm w-24 text-right text-ink"
                     value={c.quantity}
                     onChange={(e) =>
                       setComponents((cs) =>
@@ -558,7 +558,7 @@ className="btn-ghost btn-xs text-warn"
               </label>
               <label>
                 <span className="mb-1 block text-sm text-mute">Qty per sale</span>
-                <input type="number" min="0" step="0.001" className="input input-md w-24 text-ink" value={pickQty} onChange={(e) => setPickQty(e.target.value)} />
+                <input type="number" min="0" step="0.001" className="input-field input-md w-24 text-ink" value={pickQty} onChange={(e) => setPickQty(e.target.value)} />
               </label>
               <button
                 className={`btn-outline text-ink border-line hover:bg-panel hover:text-ink ${busy ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -667,7 +667,7 @@ function CategoriesModal({ open, onClose, onChanged }) {
                   onChange={(e) => setList((l) => l.map((c) => (c.id === cat.id ? { ...c, color: e.target.value } : c)))}
                 />
                 <input
-                  className="input input-sm flex-1 text-ink"
+                  className="input-field input-sm flex-1 text-ink"
                   value={cat.name}
                   onChange={(e) => setList((l) => l.map((c) => (c.id === cat.id ? { ...c, name: e.target.value } : c)))}
                 />
@@ -675,7 +675,7 @@ function CategoriesModal({ open, onClose, onChanged }) {
                 <button className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink" onClick={() => update(cat)}>
                   <Save className="h-4 w-4" />
                 </button>
-                <button className="btn btn-ghost btn-xs text-warn" onClick={() => remove(cat)}>
+                <button className="btn-ghost btn-xs text-warn" onClick={() => remove(cat)}>
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>
