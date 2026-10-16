@@ -12,9 +12,9 @@ export default function Receipt({ order }) {
     : order.subtotal - order.discount;
 
   return (
-    <div className="print-area rounded-xl bg-base-100 p-4 font-mono text-sm">
+    <div className="print-area rounded-xl bg-panel p-4 font-data text-sm text-ink">
       <div className="text-center">
-        {tenant?.logoUrl && <img src={tenant.logoUrl} alt="Logo" className="mx-auto mb-2 h-12 w-auto object-contain" />}
+        {tenant?.logoUrl && <img src={tenant.logoUrl} alt="Logo" className="mx-auto mb-2 h-12 w-auto object-contain" width="48" height="48" loading="lazy" />}
         {tenant?.receiptHeader && <div className="mb-1 text-xs opacity-70">{tenant.receiptHeader}</div>}
         <div className="text-lg font-bold">{tenant?.name}</div>
         {tenant?.address && <div className="text-xs opacity-70">{tenant.address}</div>}
@@ -24,8 +24,8 @@ export default function Receipt({ order }) {
         {tenant?.machineSerialNo && <div className="text-xs opacity-70">Machine SN: {tenant.machineSerialNo}</div>}
       </div>
 
-      <div className="my-3 border-t border-dashed border-base-300 pt-2 text-xs opacity-70">
-        <div className="text-center text-sm font-bold">OFFICIAL RECEIPT</div>
+      <div className="my-3 border-t border-dashed border-line pt-2 text-xs opacity-70">
+        <div className="text-center text-sm font-bold text-accent">OFFICIAL RECEIPT</div>
         <div>Receipt #{order.orderNo}</div>
         <div>{new Date(order.createdAt).toLocaleString()}</div>
         {order.cashierName && <div>Served by {order.cashierName}</div>}
@@ -46,7 +46,7 @@ export default function Receipt({ order }) {
         </tbody>
       </table>
 
-      <div className="mt-3 space-y-0.5 border-t border-dashed border-base-300 pt-2 text-xs">
+      <div className="mt-3 space-y-0.5 border-t border-dashed border-line pt-2 text-xs">
         <Row label="Subtotal (VAT Incl.)" value={money(order.subtotal)} />
         {order.discount > 0 && (
           <>
@@ -76,9 +76,9 @@ export default function Receipt({ order }) {
         {(order.roundingAdjustment ?? 0) !== 0 && (
           <Row label="Cash rounding" value={money(order.roundingAdjustment)} />
         )}
-        <div className="flex justify-between border-t border-base-300 pt-1 text-sm font-bold">
+        <div className="flex justify-between border-t border-line pt-1 text-sm font-bold">
           <span>TOTAL</span>
-          <span>{money(order.total)}</span>
+          <span className="font-data">{money(order.total)}</span>
         </div>
       </div>
 
@@ -99,17 +99,17 @@ export default function Receipt({ order }) {
       </div>
 
       {(order.refundedTotal ?? 0) > 0 && (
-        <div className="mt-2 text-xs font-bold text-error">Refunded: {money(order.refundedTotal)}</div>
+        <div className="mt-2 text-xs font-bold text-warn">Refunded: {money(order.refundedTotal)}</div>
       )}
       {order.status === 'refunded' && (
-        <div className="mt-3 text-center font-bold text-error">** REFUNDED **</div>
+        <div className="mt-3 text-center font-bold text-warn">** REFUNDED **</div>
       )}
       {order.status === 'layaway' && (
-        <div className="mt-3 text-center font-bold text-warning">** LAYAWAY - BALANCE DUE **</div>
+        <div className="mt-3 text-center font-bold text-warn">** LAYAWAY - BALANCE DUE **</div>
       )}
 
       {tenant?.receiptFooter && (
-        <div className="mt-4 border-t border-dashed border-base-300 pt-2 text-center text-xs opacity-70">
+        <div className="mt-4 border-t border-dashed border-line pt-2 text-center text-xs opacity-70">
           {tenant.receiptFooter}
         </div>
       )}
@@ -121,7 +121,7 @@ function Row({ label, value }) {
   return (
     <div className="flex justify-between gap-4">
       <span>{label}</span>
-      <span className="whitespace-nowrap">{value}</span>
+      <span className="whitespace-nowrap font-data">{value}</span>
     </div>
   );
 }

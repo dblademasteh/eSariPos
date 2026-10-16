@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 // Structured JSON logging (pino-shaped) with an optional Sentry pipeline.
 // No external dependencies: one line of JSON per event on stdout.
 

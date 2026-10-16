@@ -38,19 +38,22 @@ export default function GiftCards() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div>
-          <h1 className="text-xl font-bold">Gift cards</h1>
-          <p className="text-sm opacity-60">Issue store credit, reload balances, redeem at the register</p>
+      <div className="receipt-head">
+        <div className="receipt-meta">
+          <span className="font-bold">{tenant?.name}</span>
+          <span className="dot" aria-hidden="true"></span>
+          <span>{new Date().toLocaleDateString()}</span>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <h1 className="text-xl font-bold">Gift cards</h1>
+        <p className="text-sm text-mute">Issue store credit, reload balances, redeem at the register</p>
+        <div className="ml-auto flex items-center gap-2 mt-2">
           <input
-            className="input input-sm w-44"
+            className="input-field input-sm w-44 text-ink"
             placeholder="Search code…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button className="btn btn-primary btn-sm" onClick={() => setCreating({})}>
+          <button className="btn-cta btn-sm" onClick={() => setCreating({})}>
             + Issue card
           </button>
         </div>
@@ -59,42 +62,42 @@ export default function GiftCards() {
       {!cards ? (
         <Spinner />
       ) : cards.length === 0 ? (
-        <EmptyState icon={<Ticket className="mx-auto h-12 w-12 opacity-30" />} title="No gift cards yet" subtitle="Issue one to get started." />
+        <EmptyState icon={<Ticket className="mx-auto h-12 w-12 text-mute" />} title="No gift cards yet" subtitle="Issue one to get started." />
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
-          <table className="table">
+        <div className="overflow-x-auto card-counter">
+          <table className="table-counter">
             <thead>
               <tr>
-                <th>Code</th>
-                <th className="text-right">Balance</th>
-                <th>Issued</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
+                <th className="text-ink">Code</th>
+                <th className="text-right text-ink">Balance</th>
+                <th className="text-ink">Issued</th>
+                <th className="text-ink">Status</th>
+                <th className="text-right text-ink">Actions</th>
               </tr>
             </thead>
             <tbody>
               {cards.map((c) => (
-                <tr key={c.id} className={!c.isActive ? 'opacity-50' : ''}>
-                  <td className="font-mono font-medium">{c.code}</td>
-                  <td className="text-right font-semibold">{money(c.balance)}</td>
-                  <td className="text-xs opacity-60">{fmtDateTime(c.createdAt)}</td>
+                <tr key={c.id} className={!c.isActive ? 'text-mute' : ''}>
+                  <td className="font-data font-medium text-ink">{c.code}</td>
+                  <td className="text-right font-semibold text-ink">{money(c.balance)}</td>
+                  <td className="text-xs text-mute">{fmtDateTime(c.createdAt)}</td>
                   <td>
                     {c.isActive ? (
-                      <span className="badge badge-success badge-sm">Active</span>
+                      <span className="badge-pill badge-sm accent">Active</span>
                     ) : (
-                      <span className="badge badge-ghost badge-sm">Inactive</span>
+                      <span className="badge-pill badge-sm">Inactive</span>
                     )}
                   </td>
                   <td className="text-right">
                     <div className="join">
-                      <button className="btn btn-ghost btn-xs join-item" onClick={() => setReloading(c)}>
+                      <button className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink" onClick={() => setReloading(c)}>
                         + Reload
                       </button>
-                      <button className="btn btn-ghost btn-xs join-item" onClick={() => openHistory(c)}>
+                      <button className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink" onClick={() => openHistory(c)}>
                         History
                       </button>
                       <button
-                        className={`btn btn-ghost btn-xs join-item ${c.isActive ? 'text-error' : 'text-success'}`}
+                        className={`btn-ghost btn-xs ${c.isActive ? 'text-warn' : 'text-accent'}`}
                         onClick={async () => {
                           try {
                             await api(`/gift-cards/${c.id}`, { method: 'PATCH', body: { isActive: !c.isActive } });
@@ -143,17 +146,17 @@ export default function GiftCards() {
       >
         {history && (
           <ul className="space-y-2 text-sm">
-            {history.rows.length === 0 && <li className="opacity-60">No transactions yet.</li>}
+            {history.rows.length === 0 && <li className="text-mute">No transactions yet.</li>}
             {history.rows.map((r, idx) => (
-              <li key={idx} className="flex items-center justify-between gap-3 rounded-lg bg-base-200 p-2">
+              <li key={idx} className="flex items-center justify-between gap-3 rounded-lg bg-panel p-2">
                 <div>
-                  <div className={r.delta < 0 ? 'font-medium text-error' : 'font-medium text-success'}>
+                  <div className={r.delta < 0 ? 'font-medium text-warn' : 'font-medium text-accent'}>
                     {r.delta < 0 ? '−' : '+'}
                     {money(Math.abs(r.delta))} {r.orderNo ? `· order #${r.orderNo}` : r.note ? `· ${r.note}` : ''}
                   </div>
-                  <div className="text-xs opacity-60">{fmtDateTime(r.createdAt)}</div>
+                  <div className="text-xs text-mute">{fmtDateTime(r.createdAt)}</div>
                 </div>
-                <span className="font-mono text-xs opacity-70">bal {money(r.balanceAfter)}</span>
+                <span className="font-data text-xs text-mute">bal {money(r.balanceAfter)}</span>
               </li>
             ))}
           </ul>
@@ -198,7 +201,7 @@ function IssueModal({ open, money, onClose, onDone }) {
       <div className="space-y-3">
         <Field label="Code" hint="Leave blank to auto-generate">
           <input
-            className="input input-md w-full font-mono uppercase"
+            className="input-field input-md w-full font-data text-ink uppercase"
             placeholder="GC-XXXXXX"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -209,17 +212,17 @@ function IssueModal({ open, money, onClose, onDone }) {
             type="number"
             step="0.01"
             min="0"
-            className="input input-md w-full text-right"
+            className="input-field input-md w-full text-right text-ink"
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
         </Field>
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>
+          <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>
             Cancel
           </button>
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={busy} onClick={create}>
+          <button className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={busy} onClick={create}>
             Issue card
           </button>
         </div>
@@ -256,23 +259,23 @@ function ReloadModal({ open, card, money, onClose, onDone }) {
   return (
     <Modal open={open} onClose={onClose} title={`Reload ${card.code}`}>
       <div className="space-y-3">
-        <p className="text-sm opacity-70">Current balance: {money(card.balance)}</p>
+        <p className="text-sm text-mute">Current balance: {money(card.balance)}</p>
         <Field label="Add funds">
           <input
             type="number"
             step="0.01"
             min="0"
-            className="input input-lg w-full text-right text-xl font-bold"
+            className="input-field input-lg w-full text-right text-xl font-bold font-data text-ink"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             autoFocus
           />
         </Field>
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>
+          <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>
             Cancel
           </button>
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={amt <= 0 || busy} onClick={reload}>
+          <button className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={amt <= 0 || busy} onClick={reload}>
             Add {money(amt)}
           </button>
         </div>

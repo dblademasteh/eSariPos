@@ -83,13 +83,13 @@ function OpenDrawerModal({ open, onClose }) {
     <Modal open={open} onClose={onClose} title="Start shift · opening float">
       <div className="space-y-3">
         <Field label="Opening float" hint="Cash you start the shift with">
-          <input type="number" min="0" step="0.01" className="input input-lg w-full text-right text-xl font-bold" value={float} onChange={(e) => setFloat(e.target.value)} autoFocus />
+          <input type="number" min="0" step="0.01" className="input-field input-lg w-full text-right text-xl font-bold" value={float} onChange={(e) => setFloat(e.target.value)} autoFocus />
         </Field>
         <div className="modal-action">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn-ghost" onClick={onClose}>
             Not now
           </button>
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={busy || !(Number(float) >= 0)} onClick={submitOpen}>
+          <button className={`btn-cta ${busy ? 'opacity-50 pointer-events-none' : ''}`} disabled={busy || !(Number(float) >= 0)} onClick={submitOpen}>
             Open drawer
           </button>
         </div>
@@ -158,7 +158,7 @@ function ManageDrawerModal({ open, session, money, onClose }) {
         <p className="py-6 text-center opacity-60">Loading…</p>
       ) : (
         <div className="space-y-4">
-          <div className="print-area rounded-xl bg-base-200 p-4 font-mono text-sm">
+          <div className="print-area rounded-xl bg-panel p-4 font-mono text-sm">
             <div className="text-center font-bold">
               {isZ ? '*** Z-REPORT ***' : `X-REPORT · ${fmtDateTime(reportView.openedAt)}`}
             </div>
@@ -167,14 +167,14 @@ function ManageDrawerModal({ open, session, money, onClose }) {
               {row('Orders', reportView.ordersCount)}
               {row('Gross sales', money(reportView.grossSales))}
               {(reportView.refunds ?? 0) > 0 && row('Refunds', `- ${money(reportView.refunds)}`)}
-              {row('Net sales', money(reportView.netSales), 'border-t border-base-300 pt-1 font-bold')}
+              {row('Net sales', money(reportView.netSales), 'border-t border-line pt-1 font-bold')}
             </div>
-            <div className="mt-2 space-y-1 border-t border-dashed border-base-300 pt-2">
+            <div className="mt-2 space-y-1 border-t border-dashed border-line pt-2">
               {Object.entries(reportView.byMethod).map(([m, amt]) => (
                 <div key={m}>{row(m.replace('_', ' '), money(amt))}</div>
               ))}
             </div>
-            <div className="mt-2 space-y-1 border-t border-dashed border-base-300 pt-2">
+            <div className="mt-2 space-y-1 border-t border-dashed border-line pt-2">
               {row('Opening float', money(reportView.openingFloat))}
               {row('Cash sales (less change)', money(reportView.cashKept))}
               {(reportView.drops ?? 0) > 0 && row('Drops', `- ${money(reportView.drops)}`)}
@@ -183,7 +183,7 @@ function ManageDrawerModal({ open, session, money, onClose }) {
               {isZ && (
                 <>
                   {row('Counted', money(reportView.countedCash))}
-                  <div className={`flex justify-between font-bold ${reportView.variance === 0 ? '' : reportView.variance > 0 ? 'text-success' : 'text-error'}`}>
+                  <div className={`flex justify-between font-bold ${reportView.variance === 0 ? '' : reportView.variance > 0 ? 'text-accent' : 'text-warn'}`}>
                     <span>Variance</span>
                     <span>{money(reportView.variance)}</span>
                   </div>
@@ -195,19 +195,19 @@ function ManageDrawerModal({ open, session, money, onClose }) {
           {!isZ && (
             <>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-[110px_1fr_90px]">
-                <select aria-label="Cash movement type" className="select select-sm" value="" onChange={(e) => e.target.value && addEvent(e.target.value)}>
+                <select aria-label="Cash movement type" className="select-field input-sm" value="" onChange={(e) => e.target.value && addEvent(e.target.value)}>
                   <option value="">Cash out…</option>
                   <option value="drop">Drop to safe</option>
                   <option value="payout">Expense payout</option>
                 </select>
-                <input type="number" min="0" step="0.01" aria-label="Amount" className="input input-sm" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
-                <input aria-label="Note" className="input input-sm" placeholder="Note" value={note} onChange={(e) => setNote(e.target.value)} />
+                <input type="number" min="0" step="0.01" aria-label="Amount" className="input-field input-sm" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <input aria-label="Note" className="input-field input-sm" placeholder="Note" value={note} onChange={(e) => setNote(e.target.value)} />
               </div>
-              <div className="rounded-xl bg-warning/10 p-3">
+              <div className="rounded-lg bg-warn-dim p-3">
                 <div className="mb-1 text-xs uppercase tracking-wide opacity-60">Close shift (Z)</div>
                 <div className="flex items-center gap-2">
-                  <input type="number" min="0" step="0.01" className="input input-sm flex-1" placeholder={`Counted cash · expect ${money(reportView.expectedCash)}`} value={counted} onChange={(e) => setCounted(e.target.value)} />
-                  <button className="btn btn-primary btn-sm" disabled={!(Number(counted) >= 0)} onClick={close}>
+                  <input type="number" min="0" step="0.01" className="input-field input-sm flex-1" placeholder={`Counted cash · expect ${money(reportView.expectedCash)}`} value={counted} onChange={(e) => setCounted(e.target.value)} />
+                  <button className="btn-cta btn-sm" disabled={!(Number(counted) >= 0)} onClick={close}>
                     Close & print Z
                   </button>
                 </div>
@@ -217,11 +217,11 @@ function ManageDrawerModal({ open, session, money, onClose }) {
 
           <div className="modal-action print:hidden">
             {isZ && (
-              <button className="btn mr-auto" onClick={() => window.print()}>
-                <Printer className="mr-1 inline h-4 w-4" /> Print Z-report
+              <button className="btn-ghost mr-auto" onClick={() => window.print()}>
+                <Printer className="mr-1 inline h-4 w-4" aria-hidden="true" /> Print Z-report
               </button>
             )}
-            <button className="btn btn-primary" onClick={onClose}>
+            <button className="btn-cta" onClick={onClose}>
               {isZ ? 'Done' : 'Hide'}
             </button>
           </div>

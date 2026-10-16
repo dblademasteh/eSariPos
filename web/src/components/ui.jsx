@@ -7,27 +7,19 @@ let counter = 0;
 const TYPE_CONFIG = {
   success: {
     icon: Check,
-    bg: 'bg-success/10 border-success/20',
-    iconColor: 'text-success',
-    barColor: 'bg-success',
+    label: 'success',
   },
   error: {
     icon: X,
-    bg: 'bg-error/10 border-error/20',
-    iconColor: 'text-error',
-    barColor: 'bg-error',
+    label: 'error',
   },
   info: {
     icon: Info,
-    bg: 'bg-info/10 border-info/20',
-    iconColor: 'text-info',
-    barColor: 'bg-info',
+    label: 'info',
   },
   warning: {
     icon: AlertTriangle,
-    bg: 'bg-warning/10 border-warning/20',
-    iconColor: 'text-warning',
-    barColor: 'bg-warning',
+    label: 'warning',
   },
 };
 
@@ -65,41 +57,20 @@ function ToastItem({ id, message, type, onDismiss }) {
   return (
     <div
       role={type === 'error' ? 'alert' : 'status'}
-      className={`
-        relative overflow-hidden rounded-xl border bg-base-100 shadow-xl
-        transition-all duration-200 ease-out
-        ${cfg.bg}
-        ${exiting ? 'translate-x-[110%] opacity-0' : 'translate-x-0 opacity-100'}
-      `}
-      style={{ minWidth: '320px', maxWidth: '420px' }}
+      className={`toast-item ${exiting ? 'opacity-0 pointer-events-none' : ''} ${type === 'error' ? 'toast-item.error' : type === 'success' ? 'toast-item.success' : 'toast-item.info'}`}
+      aria-label={message}
     >
-      <div className="flex items-start gap-3 p-3">
-        {/* Icon */}
-        <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-base-200`}>
-          <Icon className={`h-3.5 w-3.5 ${cfg.iconColor}`} strokeWidth={2.5} />
+      <div className="toast-body">
+        <div className="toast-icon toast-icon.${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}">
+          <Icon className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
         </div>
-
-        {/* Message */}
-        <p className="flex-1 pt-0.5 text-sm font-medium leading-snug text-base-content">
-          {message}
-        </p>
-
-        {/* Close */}
-        <button
-          onClick={handleClose}
-          className="btn btn-ghost btn-xs btn-circle shrink-0 opacity-40 hover:opacity-100"
-          aria-label="Dismiss"
-        >
-          <X className="h-3.5 w-3.5" />
+        <p className="toast-message">{message}</p>
+        <button onClick={handleClose} className="toast-dismiss" aria-label="Dismiss">
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
-
-      {/* Progress bar */}
-      <div className="h-0.5 w-full bg-base-300/30">
-        <div
-          className={`h-full rounded-full transition-none ${cfg.barColor}`}
-          style={{ width: `${progress}%`, opacity: 0.6 }}
-        />
+      <div className="toast-progress">
+        <div className="bar" style={{ width: `${progress}%` }} />
       </div>
     </div>
   );
@@ -130,7 +101,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[999] flex flex-col-reverse gap-2" aria-live="polite">
+      <div className="toast-container" aria-live="polite">
         {toasts.map((t) => (
           <ToastItem key={t.id} {...t} onDismiss={dismiss} />
         ))}
@@ -155,7 +126,7 @@ export function Modal({ open, onClose, title, children, footer, wide }) {
     const t = setTimeout(() => {
       const el = boxRef.current;
       if (!el) return;
-      const focusable = el.querySelector('input:not([disabled]),select:not([disabled]),textarea:not([disabled])');
+      const focusable = el.querySelector('input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled])');
       (focusable ?? el).focus?.();
     }, 0);
     return () => {
@@ -166,29 +137,26 @@ export function Modal({ open, onClose, title, children, footer, wide }) {
 
   if (!open) return null;
   return (
-    <div
-      className="modal modal-open"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose?.();
-      }}
-    >
+    <div className="modal-backdrop" onMouseDown={(e) => {
+      if (e.target === e.currentTarget) onClose?.();
+    }}>
       <div
         ref={boxRef}
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : 'Dialog'}
         tabIndex={-1}
-        className={`modal-box max-w-lg outline-none ${wide ? 'lg:max-w-3xl' : ''}`}
+        className={`modal-box ${wide ? 'wide' : ''}`}
       >
         {title !== undefined && (
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <h3 className="text-lg font-bold">{title}</h3>
-            <button aria-label="Close dialog" className="btn btn-circle btn-ghost btn-sm" onClick={onClose}>
-              <X className="h-4 w-4" />
+          <div className="modal-header">
+            <h3 className="mb-4 text-lg font-bold tracking-tight text-ink">{title}</h3>
+            <button aria-label="Close dialog" className="modal-close" onClick={onClose}>
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         )}
-        {children}
+        <div className="modal-body">{children}</div>
         {footer && <div className="modal-action">{footer}</div>}
       </div>
     </div>
@@ -197,34 +165,38 @@ export function Modal({ open, onClose, title, children, footer, wide }) {
 
 export function Field({ label, children, hint }) {
   return (
-    <label className="block w-full">
-      <span className="mb-1 block text-sm font-medium opacity-80">{label}</span>
+    <div className="field">
+      {label && <span className="field-label">{label}</span>}
       {children}
-      {hint && <span className="mt-1 block text-xs opacity-60">{hint}</span>}
-    </label>
+      {hint && <span className="field-hint">{hint}</span>}
+    </div>
   );
 }
 
 export function Spinner({ label = 'Loading…' }) {
   return (
-    <div className="flex items-center justify-center gap-3 py-16 text-base-content/60">
-      <span className="loading loading-spinner loading-md text-primary"></span>
-      <span>{label}</span>
+    <div className="flex items-center justify-center gap-3 py-16 text-mute">
+      <span className="spinner text-accent" aria-hidden="true"></span>
+      <span className="text-mute">{label}</span>
     </div>
   );
 }
 
 export function EmptyState({ icon, title, subtitle }) {
   return (
-    <div className="py-16 text-center">
-      <div className="text-5xl">{typeof icon === 'string' ? icon : icon}</div>
-      <p className="mt-3 font-semibold">{title}</p>
-      {subtitle && <p className="mt-1 text-sm opacity-60">{subtitle}</p>}
+    <div className="empty-state">
+      <div className="empty-icon" aria-hidden="true">{typeof icon === 'string' ? icon : icon}</div>
+      <p className="empty-title">{title}</p>
+      {subtitle && <p className="empty-subtitle">{subtitle}</p>}
     </div>
   );
 }
 
 export function RoleBadge({ role }) {
-  const cls = { owner: 'badge-primary', manager: 'badge-secondary', cashier: 'badge-ghost' }[role] || 'badge-ghost';
-  return <span className={`badge badge-sm capitalize ${cls}`}>{role}</span>;
+  const cls = {
+    owner: 'badge-pill fill-accent',
+    manager: 'badge-pill accent',
+    cashier: 'badge-pill',
+  }[role] || 'badge-pill';
+  return <span className={cls}>{role}</span>;
 }

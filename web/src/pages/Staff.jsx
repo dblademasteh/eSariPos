@@ -35,12 +35,15 @@ export default function Staff() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <div>
-          <h1 className="text-xl font-bold">Staff</h1>
-          <p className="text-sm opacity-60">People who can sign in to this business</p>
+      <div className="receipt-head">
+        <div className="receipt-meta">
+          <span className="font-bold">eSariPOS</span>
+          <span className="dot" aria-hidden="true"></span>
+          <span>{new Date().toLocaleDateString()}</span>
         </div>
-        <button className="btn btn-primary btn-sm ml-auto" onClick={() => setEditing({})}>
+        <h1 className="text-xl font-bold">Staff</h1>
+        <p className="text-sm opacity-60">People who can sign in to this business</p>
+        <button className="btn-cta btn-sm ml-auto mt-2" onClick={() => setEditing({})}>
           + Add staff
         </button>
       </div>
@@ -48,8 +51,8 @@ export default function Staff() {
       {!staff ? (
         <Spinner />
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
-          <table className="table">
+        <div className="overflow-x-auto rounded-xl bg-paper">
+          <table className="table-counter">
             <thead>
               <tr>
                 <th>Name</th>
@@ -65,23 +68,23 @@ export default function Staff() {
                 <tr key={s.id} className={!s.isActive ? 'opacity-50' : ''}>
                   <td className="font-medium">
                     {s.name}
-                    {s.id === me.id && <span className="ml-2 badge badge-ghost badge-xs">you</span>}
+                    {s.id === me.id && <span className="ml-2 badge-pill badge-sm">you</span>}
                   </td>
                   <td>{s.email}</td>
                   <td>
                     <RoleBadge role={s.role} />
-                    {s.totpEnabled && <span className="badge badge-success badge-xs ml-1">2FA</span>}
+                    {s.totpEnabled && <span className="badge-pill badge-sm accent ml-1">2FA</span>}
                   </td>
                   <td>
                     <span className="text-xs opacity-70">
                       {s.perms.length ? s.perms.join(', ') : 'sell only'}
-                      {s.hasPin && <><span className="mx-1">·</span>PIN <Check className="inline h-3 w-3 text-success" /></>}
+                      {s.hasPin && <><span className="mx-1">·</span>PIN <Check className="inline h-3 w-3 text-accent" /></>}
                     </span>
                   </td>
                   <td>
                     <input
                       type="checkbox"
-                      className="toggle toggle-success toggle-sm"
+                      className="toggle-field toggle-sm"
                       checked={s.isActive}
                       disabled={s.id === me.id}
                       onChange={async (e) => {
@@ -98,13 +101,13 @@ export default function Staff() {
                     />
                   </td>
                   <td className="text-right">
-                    <button aria-label={`Edit ${s.name}`} className="btn btn-ghost btn-xs" onClick={() => setEditing(s)}>
+                    <button aria-label={`Edit ${s.name}`} className="btn-ghost btn-xs" onClick={() => setEditing(s)}>
                        <Pencil className="h-4 w-4" />
                     </button>
                     {!s.hasPin && (
                       <button
                         aria-label={`Set register PIN for ${s.name}`}
-                        className="btn btn-ghost btn-xs"
+                        className="btn-ghost btn-xs"
                         title="Set this member's register PIN"
                         onClick={async () => {
                           const pin = window.prompt(`4-8 digit PIN for ${s.name} (blank to cancel)`);
@@ -130,7 +133,7 @@ export default function Staff() {
       )}
 
       {report && report.shifts.length > 0 && (
-        <div className="rounded-xl bg-base-100 p-4 shadow">
+        <div className="rounded-lg bg-paper p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-bold">Time clock · last 30 days</h2>
             <button
@@ -190,7 +193,7 @@ export default function Staff() {
       />
 
       {pinFor && (
-        <div className="modal modal-open" onMouseDown={(e) => e.target === e.currentTarget && setPinFor(null)}>
+        <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setPinFor(null)}>
           <div className="modal-box max-w-sm">
             <PinPad
               title={`Register PIN · ${pinFor.name}`}
@@ -267,21 +270,21 @@ function StaffModal({ open, staff, onClose, onSaved, onPin }) {
     <Modal open={open} onClose={onClose} title={isNew ? 'Add staff member' : `Edit ${staff.name}`} wide>
       <form onSubmit={save} className="space-y-3">
         <Field label="Name">
-          <input className="input input-md w-full" value={form.name} onChange={set('name')} required autoFocus />
+          <input className="input-field input-md w-full" value={form.name} onChange={set('name')} required autoFocus />
         </Field>
         <Field label="Email">
-          <input type="email" className="input input-md w-full" value={form.email} onChange={set('email')} required disabled={!isNew} />
+          <input type="email" className="input-field input-md w-full" value={form.email} onChange={set('email')} required disabled={!isNew} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Role" hint="Managers can refund and edit products. Cashiers sell.">
-            <select className="select select-md w-full" value={form.role} onChange={set('role')}>
+            <select className="select-field input-md w-full" value={form.role} onChange={set('role')}>
               <option value="cashier">Cashier</option>
               <option value="manager">Manager</option>
               <option value="owner">Owner</option>
             </select>
           </Field>
           <Field label={isNew ? 'Password' : 'New password'} hint={isNew ? undefined : 'Leave blank to keep current'}>
-            <input type="password" className="input input-md w-full" placeholder="••••••••" minLength={8} required={isNew} value={form.password} onChange={set('password')} />
+            <input type="password" className="input-field input-md w-full" placeholder="••••••••" minLength={8} required={isNew} value={form.password} onChange={set('password')} />
           </Field>
         </div>
 
@@ -298,7 +301,7 @@ function StaffModal({ open, staff, onClose, onSaved, onPin }) {
                     <label className="flex cursor-pointer items-center gap-2 text-sm">
                       <input
                         type="checkbox"
-                        className="toggle toggle-sm toggle-primary"
+                        className="toggle-field toggle-sm"
                         checked={Boolean(perms[k])}
                         onChange={(e) => setPerms((p) => ({ ...p, [k]: e.target.checked }))}
                       />
@@ -316,7 +319,7 @@ function StaffModal({ open, staff, onClose, onSaved, onPin }) {
               {staff.hasPin && (
                 <button
                   type="button"
-                  className="btn btn-outline btn-error btn-sm"
+                  className="btn-outline btn-warn btn-sm"
                   onClick={async () => {
                     try {
                       await api(`/staff/${staff.id}`, { method: 'PATCH', body: { pin: null } });
@@ -335,10 +338,10 @@ function StaffModal({ open, staff, onClose, onSaved, onPin }) {
         )}
 
         <div className="modal-action">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn-ghost" onClick={onClose}>
             Cancel
           </button>
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={busy}>
+          <button className={`btn-cta ${busy ? 'opacity-50 pointer-events-none' : ''}`} disabled={busy}>
             {isNew ? 'Create' : 'Save'}
           </button>
         </div>

@@ -8,16 +8,16 @@ import Receipt from '../components/Receipt.jsx';
 import { Receipt as ReceiptIcon, RotateCcw, Banknote, Printer, Download } from 'lucide-react';
 
 const STATUS_BADGES = {
-  completed: { cls: 'badge-success', label: 'Completed' },
-  partially_refunded: { cls: 'badge-warning', label: 'Partly refunded' },
-  refunded: { cls: 'badge-error', label: 'Refunded' },
-  layaway: { cls: 'badge-warning', label: 'Layaway' },
-  cancelled: { cls: 'badge-ghost', label: 'Cancelled' },
+  completed: { cls: 'bg-accent text-white', label: 'Completed' },
+  partially_refunded: { cls: 'bg-warn/10 text-warn border border-warn/20', label: 'Partly refunded' },
+  refunded: { cls: 'bg-warn text-white', label: 'Refunded' },
+  layaway: { cls: 'bg-warn/10 text-warn border border-warn/20', label: 'Layaway' },
+  cancelled: { cls: 'bg-panel text-mute border border-line', label: 'Cancelled' },
 };
 
 function StatusBadge({ status }) {
-  const s = STATUS_BADGES[status] ?? { cls: 'badge-ghost', label: status };
-  return <span className={`badge badge-sm ${s.cls}`}>{s.label}</span>;
+  const s = STATUS_BADGES[status] ?? { cls: 'bg-panel text-mute border border-line', label: status };
+  return <span className={`badge-pill badge-sm border rounded-full ${s.cls}`}>{s.label}</span>;
 }
 
 export default function Orders() {
@@ -67,16 +67,19 @@ export default function Orders() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div>
-          <h1 className="text-xl font-bold">Orders</h1>
-          <p className="text-sm opacity-60">
-            {orders ? `${orders.length} orders · ${money(dayTotal)} sold` : ' '}
-          </p>
+      <div className="receipt-head">
+        <div className="receipt-meta">
+          <span className="font-bold">{tenant?.name}</span>
+          <span className="dot" aria-hidden="true"></span>
+          <span>{new Date().toLocaleDateString()}</span>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <input type="date" className="input input-sm" value={date} onChange={(e) => setDate(e.target.value)} />
-          <select className="select select-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <h1 className="text-xl font-bold">Orders</h1>
+        <p className="text-sm text-mute">
+          {orders ? `${orders.length} orders · ${money(dayTotal)} sold` : ' '}
+        </p>
+        <div className="ml-auto flex items-center gap-2 mt-2">
+          <input type="date" className="input-field input-sm" value={date} onChange={(e) => setDate(e.target.value)} />
+          <select className="select-field input-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="all">All</option>
             <option value="completed">Completed</option>
             <option value="partially_refunded">Partly refunded</option>
@@ -86,7 +89,7 @@ export default function Orders() {
           </select>
           {orders && orders.length > 0 && (
             <button
-              className="btn btn-outline btn-sm"
+              className="btn-outline btn-sm text-ink border-line hover:bg-panel hover:text-ink"
               onClick={() =>
                 downloadCsv(`orders-${date}`, [
                   { key: 'orderNo', label: 'Receipt #' },
@@ -107,38 +110,38 @@ export default function Orders() {
       {!orders ? (
         <Spinner />
       ) : orders.length === 0 ? (
-        <EmptyState icon={<ReceiptIcon className="mx-auto h-12 w-12 opacity-30" />} title="No orders on this date" />
+        <EmptyState icon={<ReceiptIcon className="mx-auto h-12 w-12 text-mute" />} title="No orders on this date" />
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
-          <table className="table">
+        <div className="overflow-x-auto card-counter">
+          <table className="table-counter">
             <thead>
               <tr>
-                <th>Receipt #</th>
-                <th>Time</th>
-                <th>Items</th>
-                <th>Paid via</th>
-                <th>Customer</th>
-                <th className="text-right">Total</th>
-                <th>Status</th>
+                <th className="text-ink">Receipt #</th>
+                <th className="text-ink">Time</th>
+                <th className="text-ink">Items</th>
+                <th className="text-ink">Paid via</th>
+                <th className="text-ink">Customer</th>
+                <th className="text-right text-ink">Total</th>
+                <th className="text-ink">Status</th>
               </tr>
             </thead>
             <tbody>
               {orders.map((o) => (
-                <tr key={o.id} className="cursor-pointer hover:bg-base-200" onClick={() => openDetail(o.id)}>
-                  <td className="font-mono font-medium">#{o.orderNo}</td>
-                  <td>{fmtDateTime(o.createdAt)}</td>
-                  <td>{o.itemCount}</td>
+                <tr key={o.id} className="cursor-pointer hover:bg-panel" onClick={() => openDetail(o.id)}>
+                  <td className="font-data font-medium text-ink">#{o.orderNo}</td>
+                  <td className="text-mute">{fmtDateTime(o.createdAt)}</td>
+                  <td className="text-mute">{o.itemCount}</td>
                   <td>
                     <div className="flex flex-wrap gap-1">
                       {o.methods.map((m) => (
-                        <span key={m} className="badge badge-ghost badge-xs capitalize">
+                        <span key={m} className="badge-pill badge-sm text-mute capitalize">
                           {m.replace('_', ' ')}
                         </span>
                       ))}
                     </div>
                   </td>
-                  <td>{o.customerName ?? '—'}</td>
-                  <td className="text-right font-semibold">{money(o.total)}</td>
+                  <td className="text-mute">{o.customerName ?? '—'}</td>
+                  <td className="text-right font-semibold text-ink">{money(o.total)}</td>
                   <td>
                     <StatusBadge status={o.status} />
                   </td>
@@ -155,17 +158,17 @@ export default function Orders() {
             <Receipt order={selected} />
             <div className="modal-action print:hidden">
               {canRefund && ['completed', 'partially_refunded'].includes(selected.status) && (
-                <button className="btn btn-outline btn-error mr-auto" onClick={() => setRefunding(selected)}>
+                <button className="btn-outline text-warn border-warn" onClick={() => setRefunding(selected)}>
                   <RotateCcw className="mr-1 inline h-4 w-4" /> Refund…
                 </button>
               )}
               {manage && selected.status === 'layaway' && (
                 <>
-                  <button className="btn btn-primary mr-auto" onClick={() => setSettling(selected)}>
+                  <button className="btn-cta" onClick={() => setSettling(selected)}>
                     <Banknote className="mr-1 inline h-4 w-4" /> Settle balance
                   </button>
                   <button
-                    className="btn btn-outline btn-error"
+                    className="btn-outline text-warn border-warn"
                     onClick={async () => {
                       if (!window.confirm(`Cancel layaway #${selected.orderNo}? Stock returns and the deposit is marked as returned.`)) return;
                       try {
@@ -181,10 +184,10 @@ export default function Orders() {
                   </button>
                 </>
               )}
-              <button className="btn" onClick={() => window.print()}>
+              <button className="btn-ghost text-ink border-line hover:bg-panel hover:text-ink" onClick={() => window.print()}>
                 <Printer className="mr-1 inline h-4 w-4" /> Print
               </button>
-              <button className="btn btn-primary" onClick={() => setSelected(null)}>
+              <button className="btn-cta" onClick={() => setSelected(null)}>
                 Close
               </button>
             </div>
@@ -255,17 +258,17 @@ function RefundModal({ open, order, money, onClose, onDone }) {
     <Modal open={open} onClose={onClose} title={`Refund order #${order.orderNo}`} wide>
       <div className="space-y-3">
         {refundable.length === 0 ? (
-          <p className="text-sm opacity-60">Nothing left to refund on this order.</p>
+          <p className="text-sm text-mute">Nothing left to refund on this order.</p>
         ) : (
           <>
             <ul className="space-y-2">
               {refundable.map((i) => {
                 const left = i.quantity - i.refundedQty;
                 return (
-                  <li key={i.id} className="flex items-center gap-3 rounded-lg bg-base-200 p-2">
+                  <li key={i.id} className="flex items-center gap-3 rounded-lg bg-panel p-2">
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">{i.productName}</div>
-                      <div className="text-xs opacity-60">
+                      <div className="truncate text-sm font-medium text-ink">{i.productName}</div>
+                      <div className="text-xs text-mute">
                         {money(i.unitPrice)} · {left} of {i.quantity} refundable
                       </div>
                     </div>
@@ -273,7 +276,7 @@ function RefundModal({ open, order, money, onClose, onDone }) {
                       type="number"
                       min="0"
                       max={left}
-                      className="input input-sm w-20 text-right"
+                      className="input-field input-sm w-20 text-right text-ink"
                       value={qtys[i.id] ?? 0}
                       onChange={(e) =>
                         setQtys((q) => ({
@@ -286,10 +289,10 @@ function RefundModal({ open, order, money, onClose, onDone }) {
                 );
               })}
             </ul>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
               <input
                 type="checkbox"
-                className="toggle toggle-sm toggle-success"
+                className="toggle-field toggle-sm"
                 checked={restock}
                 onChange={(e) => setRestock(e.target.checked)}
               />
@@ -298,16 +301,16 @@ function RefundModal({ open, order, money, onClose, onDone }) {
           </>
         )}
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>
+          <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>
             Close
           </button>
           {pickedQty > 0 && !everythingLeft && (
-            <button className={`btn btn-error ${busy ? 'loading' : ''}`} disabled={busy} onClick={() => send(refundable.map((i) => ({ itemId: i.id, quantity: Number(qtys[i.id]) || 0 })).filter((l) => l.quantity > 0))}>
+            <button className={`btn-warn text-white ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={busy} onClick={() => send(refundable.map((i) => ({ itemId: i.id, quantity: Number(qtys[i.id]) || 0 })).filter((l) => l.quantity > 0))}>
               Refund {pickedQty} item{pickedQty > 1 ? 's' : ''}
             </button>
           )}
           {refundable.length > 0 && (
-            <button className={`btn btn-outline btn-error ${busy ? 'loading' : ''}`} disabled={busy} onClick={() => send(null)}>
+            <button className={`btn-outline text-warn border-warn ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={busy} onClick={() => send(null)}>
               <RotateCcw className="mr-1 inline h-4 w-4" /> Refund entire order
             </button>
           )}
@@ -364,12 +367,12 @@ function SettleModal({ open, order, money, onClose, onDone }) {
   return (
     <Modal open={open} onClose={onClose} title={`Settle layaway #${order.orderNo}`}>
       <div className="space-y-3">
-        <div className="rounded-xl bg-warning/10 p-3 text-center">
-          <div className="text-xs uppercase tracking-wide opacity-60">Balance due</div>
-          <div className="text-2xl font-black">{money(balance)}</div>
+        <div className="rounded-lg bg-warn-dim p-3 text-center border border-warn">
+          <div className="text-xs uppercase tracking-wide text-mute">Balance due</div>
+          <div className="text-2xl font-black text-ink">{money(balance)}</div>
         </div>
         <Field label="Payment method">
-          <select className="select select-md w-full" value={method} onChange={(e) => setMethod(e.target.value)}>
+          <select className="select-field input-md w-full text-ink" value={method} onChange={(e) => setMethod(e.target.value)}>
             <option value="cash">Cash</option>
             <option value="card">Card</option>
             <option value="mobile">Mobile</option>
@@ -382,25 +385,25 @@ function SettleModal({ open, order, money, onClose, onDone }) {
             type="number"
             step="0.01"
             min="0"
-            className="input input-lg w-full text-right text-xl font-bold"
+            className="input-field input-lg w-full text-right text-xl font-bold font-data text-ink"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
         </Field>
         {(method === 'card' || method === 'mobile' || method === 'gift_card') && (
           <Field label="Reference" hint={method === 'gift_card' ? 'Gift card code' : 'Auth code, last 4, …'}>
-            <input className="input input-md w-full" value={reference} onChange={(e) => setReference(e.target.value)} />
+            <input className="input-field input-md w-full text-ink" value={reference} onChange={(e) => setReference(e.target.value)} />
           </Field>
         )}
         {paid > balance && method !== 'cash' && (
-          <p className="text-sm text-error">Overpayment is only allowed with cash.</p>
+          <p className="text-sm text-warn">Overpayment is only allowed with cash.</p>
         )}
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>
+          <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>
             Close
           </button>
           <button
-            className={`btn btn-primary ${busy ? 'loading' : ''}`}
+            className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={paid <= 0 || (paid > balance && method !== 'cash') || busy}
             onClick={settle}
           >

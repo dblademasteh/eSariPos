@@ -3,7 +3,7 @@ import { api } from '../api/client.js';
 import { makeMoney } from '../lib/format.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { EmptyState, Field, Modal, Spinner, useToast } from '../components/ui.jsx';
-import { Tag, Pencil, FlaskConical, X, Save, Trash2, ArrowUpDown, Layers } from 'lucide-react';
+import { Tag, Pencil, FlaskConical, X, Save, Trash2, ArrowUpDown, Layers, Package } from 'lucide-react';
 
 export default function Products() {
   const { tenant, can } = useAuth();
@@ -46,23 +46,26 @@ export default function Products() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div>
-          <h1 className="text-xl font-bold">Products</h1>
-          <p className="text-sm opacity-60">{filtered.length} items</p>
+      <div className="receipt-head">
+        <div className="receipt-meta">
+          <span className="font-bold">{tenant?.name}</span>
+          <span className="dot" aria-hidden="true"></span>
+          <span>{new Date().toLocaleDateString()}</span>
         </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <h1 className="text-xl font-bold">Products</h1>
+        <p className="text-sm text-mute">{filtered.length} items</p>
+        <div className="ml-auto flex flex-wrap items-center gap-2 mt-2">
           <input
-            className="input input-sm w-48"
+            className="input-field input-sm w-48 text-ink"
             placeholder="Search…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <label className="label cursor-pointer gap-2 text-sm">
-            <span className="opacity-70">Show inactive</span>
+          <label className="label cursor-pointer gap-2 text-sm text-ink">
+            <span className="text-mute">Show inactive</span>
             <input
               type="checkbox"
-              className="toggle toggle-sm"
+              className="toggle-field toggle-sm"
               checked={includeInactive}
               onChange={(e) => setIncludeInactive(e.target.checked)}
               disabled={!manage}
@@ -70,10 +73,10 @@ export default function Products() {
           </label>
           {manage && (
             <>
-              <button className="btn btn-outline btn-sm" onClick={() => setCatsOpen(true)}>
+              <button className="btn-outline btn-sm text-ink border-line hover:bg-panel hover:text-ink" onClick={() => setCatsOpen(true)}>
                 <Tag className="mr-1 inline h-4 w-4" /> Categories
               </button>
-              <button className="btn btn-primary btn-sm" onClick={() => setEditing({})}>
+              <button className="btn-cta btn-sm" onClick={() => setEditing({})}>
                 + New product
               </button>
             </>
@@ -84,71 +87,68 @@ export default function Products() {
       {!products ? (
         <Spinner />
       ) : filtered.length === 0 ? (
-        <EmptyState icon={<Package className="mx-auto h-12 w-12 opacity-30" />} title="No products yet" subtitle={manage ? 'Create your first product.' : 'Ask a manager to add products.'} />
+        <EmptyState icon={<Package className="mx-auto h-12 w-12 text-mute" />} title="No products yet" subtitle={manage ? 'Create your first product.' : 'Ask a manager to add products.'} />
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
-          <table className="table">
+        <div className="overflow-x-auto card-counter">
+          <table className="table-counter">
             <thead>
               <tr>
-                <th>Product</th>
-                <th>Category</th>
-                <th>SKU</th>
-                <th className="text-right">Price</th>
-                <th className="text-right">Stock</th>
-                {manage && <th className="text-right">Actions</th>}
+                <th className="text-ink">Product</th>
+                <th className="text-ink">Category</th>
+                <th className="text-ink">SKU</th>
+                <th className="text-right text-ink">Price</th>
+                <th className="text-right text-ink">Stock</th>
+                {manage && <th className="text-right text-ink">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {filtered.map((p) => (
-                <tr key={p.id} className={!p.isActive ? 'opacity-50' : ''}>
+                <tr key={p.id} className={!p.isActive ? 'text-mute' : ''}>
                   <td>
                     <div className="flex items-center gap-3">
                       <div>
-                        <div className="font-medium">
+                        <div className="font-medium text-ink">
                           {p.name}
                           {p.variantLabel && (
-                            <span className="badge badge-ghost badge-sm ml-2">{p.variantLabel}</span>
+                            <span className="badge-pill badge-sm text-mute ml-2">{p.variantLabel}</span>
                           )}
-                          {p.hasChildren && <span className="badge badge-outline badge-sm ml-2">variant group</span>}
+                          {p.hasChildren && <span className="badge-pill badge-sm text-mute ml-2">variant group</span>}
                         </div>
-                        {p.barcode && <div className="text-xs opacity-50">{p.barcode}</div>}
+                        {p.barcode && <div className="text-xs text-mute">{p.barcode}</div>}
                       </div>
                     </div>
                   </td>
                   <td>
                     {p.categoryName && (
-                      <span
-                        className="badge badge-sm whitespace-nowrap text-white"
-                        style={{ background: p.categoryColor }}
-                      >
+                      <span className="badge-pill fill-accent badge-sm whitespace-nowrap" style={{ background: p.categoryColor }}>
                         {p.categoryName}
                       </span>
                     )}
                   </td>
-                  <td className="font-mono text-xs">{p.sku ?? '—'}</td>
-                  <td className="text-right font-semibold">{money(p.price)}</td>
+                  <td className="font-data text-xs text-ink">{p.sku ?? '—'}</td>
+                  <td className="text-right font-semibold text-ink">{money(p.price)}</td>
                   <td className="text-right">
                     <span
-                      className={`font-mono ${
+                      className={`font-data ${
                         Number(p.stock) === 0
-                          ? 'font-bold text-error'
+                          ? 'font-bold text-warn'
                           : p.stock <= p.lowStockThreshold
-                            ? 'text-warning'
+                            ? 'text-warn'
                             : ''
                       }`}
                     >
                       {Number(p.stock)}{p.unitLabel ? ` ${p.unitLabel}` : ''}
                     </span>
                     {p.hasRecipe && (
-                      <div className="text-[10px] uppercase tracking-wide opacity-40">composite</div>
+                      <div className="text-[10px] uppercase tracking-wide text-mute">composite</div>
                     )}
                   </td>
                   {manage && (
                     <td className="text-right whitespace-nowrap">
-                      <button aria-label={`Edit ${p.name}`} className="btn btn-ghost btn-xs" onClick={() => setEditing(p)}>
+                      <button aria-label={`Edit ${p.name}`} className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink" onClick={() => setEditing(p)}>
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button aria-label={`Adjust stock for ${p.name}`} className="btn btn-ghost btn-xs" onClick={() => setAdjusting(p)}>
+                      <button aria-label={`Adjust stock for ${p.name}`} className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink" onClick={() => setAdjusting(p)}>
                         <ArrowUpDown className="h-4 w-4" />
                       </button>
                       {!p.parentId && (
@@ -156,7 +156,7 @@ export default function Products() {
                           <button
                             aria-label={`Recipe for ${p.name}`}
                             title="Recipe / ingredients"
-                            className="btn btn-ghost btn-xs"
+                            className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink"
                             onClick={() => setRecipesFor(p)}
                           >
                             <FlaskConical className="h-4 w-4" />
@@ -164,7 +164,7 @@ export default function Products() {
                           <button
                             aria-label={`Add variant of ${p.name}`}
                             title="Add a variant of this product"
-                            className="btn btn-ghost btn-xs"
+                            className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink"
                             onClick={() => setEditing({ __variantOf: p })}
                           >
                             <Layers className="h-4 w-4" />
@@ -173,7 +173,7 @@ export default function Products() {
                       )}
                       <input
                         type="checkbox"
-                        className="toggle toggle-success toggle-xs ml-1 align-middle"
+                        className="toggle-field toggle-xs ml-1 align-middle"
                         checked={p.isActive}
                         title={p.isActive ? 'Active' : 'Inactive'}
                         onChange={async (e) => {
@@ -300,20 +300,20 @@ function ProductModal({ open, product, categories, products, onClose, onSaved })
     <Modal open={open} onClose={onClose} title={isNew ? 'New product' : `Edit ${product.name}`}>
       <form onSubmit={save} className="space-y-3">
         <Field label="Name">
-          <input className="input input-md w-full" value={form.name} onChange={set('name')} required autoFocus />
+          <input className="input-field input-md w-full text-ink" value={form.name} onChange={set('name')} required autoFocus />
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="SKU">
-            <input className="input input-md w-full font-mono" value={form.sku} onChange={set('sku')} />
+            <input className="input input-md w-full font-data text-ink" value={form.sku} onChange={set('sku')} />
           </Field>
           <Field label="Barcode">
-            <input className="input input-md w-full font-mono" value={form.barcode} onChange={set('barcode')} />
+            <input className="input input-md w-full font-data text-ink" value={form.barcode} onChange={set('barcode')} />
           </Field>
         </div>
 
         <Field label="Category">
-          <select className="select select-md w-full" value={form.categoryId} onChange={set('categoryId')}>
+          <select className="select-field input-md w-full text-ink" value={form.categoryId} onChange={set('categoryId')}>
             <option value="">— None —</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
@@ -325,31 +325,31 @@ function ProductModal({ open, product, categories, products, onClose, onSaved })
 
         <div className="grid grid-cols-3 gap-3">
           <Field label={`Price (${tenant?.currency})`}>
-            <input type="number" step="0.01" min="0" className="input input-md w-full" value={form.price} onChange={set('price')} required />
+            <input type="number" step="0.01" min="0" className="input-field input-md w-full text-ink" value={form.price} onChange={set('price')} required />
           </Field>
           <Field label="Cost">
-            <input type="number" step="0.01" min="0" className="input input-md w-full" value={form.cost} onChange={set('cost')} />
+            <input type="number" step="0.01" min="0" className="input-field input-md w-full text-ink" value={form.cost} onChange={set('cost')} />
           </Field>
           <Field label="Low-stock at">
-            <input type="number" min="0" className="input input-md w-full" value={form.lowStockThreshold} onChange={set('lowStockThreshold')} />
+            <input type="number" min="0" className="input-field input-md w-full text-ink" value={form.lowStockThreshold} onChange={set('lowStockThreshold')} />
           </Field>
         </div>
 
         {isNew ? (
           <Field label="Opening stock">
-            <input type="number" min="0" step="0.001" className="input input-md w-full" value={form.stock} onChange={set('stock')} />
+            <input type="number" min="0" step="0.001" className="input-field input-md w-full text-ink" value={form.stock} onChange={set('stock')} />
           </Field>
         ) : (
-          <p className="rounded-lg bg-base-200 p-2 text-xs opacity-70">
+          <p className="rounded-lg bg-panel p-2 text-xs text-mute">
             Current stock: {Number(product.stock)}. Use the ± action to adjust stock so every change is logged.
           </p>
         )}
 
-        <div className="grid grid-cols-3 gap-3 rounded-xl border border-base-300 p-3">
-          <div className="col-span-3 text-xs font-semibold uppercase tracking-wide opacity-50">Variant / unit options</div>
+        <div className="grid grid-cols-3 gap-3 rounded-xl border border-line p-3">
+          <div className="col-span-3 text-xs font-semibold uppercase tracking-wide text-mute">Variant / unit options</div>
           <Field label="Part of group">
             <select
-              className="select select-md w-full"
+              className="select-field input-md w-full text-ink"
               value={form.parentId}
               onChange={set('parentId')}
               disabled={!isNew && Boolean(product?.parentId)}
@@ -366,33 +366,33 @@ function ProductModal({ open, product, categories, products, onClose, onSaved })
             </select>
           </Field>
           <Field label="Variant label" hint='e.g. "Oat milk", "500 g"'>
-            <input className="input input-md w-full" value={form.variantLabel} onChange={set('variantLabel')} />
+            <input className="input-field input-md w-full text-ink" value={form.variantLabel} onChange={set('variantLabel')} />
           </Field>
           <Field label="Reorder qty" hint="Used for reorder suggestions">
-            <input type="number" min="0" className="input input-md w-full" value={form.reorderQty} onChange={set('reorderQty')} />
+            <input type="number" min="0" className="input-field input-md w-full text-ink" value={form.reorderQty} onChange={set('reorderQty')} />
           </Field>
           <Field label="Sold by">
-            <select className="select select-md w-full" value={form.soldBy} onChange={set('soldBy')}>
+            <select className="select-field input-md w-full text-ink" value={form.soldBy} onChange={set('soldBy')}>
               <option value="unit">Each (unit)</option>
               <option value="weight">Weight</option>
               <option value="length">Length</option>
             </select>
           </Field>
           <Field label="Unit label" hint='e.g. "g", "kg", "cm"'>
-            <input className="input input-md w-full" value={form.unitLabel} onChange={set('unitLabel')} maxLength={8} />
+            <input className="input-field input-md w-full text-ink" value={form.unitLabel} onChange={set('unitLabel')} maxLength={8} />
           </Field>
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input type="checkbox" className="toggle toggle-sm" checked={form.isActive} onChange={set('isActive')} />
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+          <input type="checkbox" className="toggle-field toggle-sm" checked={form.isActive} onChange={set('isActive')} />
           Active (visible on register)
         </label>
 
         <div className="modal-action">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>
             Cancel
           </button>
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={busy}>
+          <button className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={busy}>
             {isNew ? 'Create' : 'Save changes'}
           </button>
         </div>
@@ -436,13 +436,13 @@ function AdjustModal({ open, product, onClose, onSaved }) {
   return (
     <Modal open={open} onClose={onClose} title={`Adjust stock · ${product.name}`}>
       <form onSubmit={save} className="space-y-3">
-        <p className="text-sm opacity-60">
-          Current stock: <b>{product.stock}</b>
+        <p className="text-sm text-mute">
+          Current stock: <b className="text-ink">{product.stock}</b>
         </p>
         <Field label="Change (+/−)" hint="Negative numbers remove stock">
           <input
             type="number"
-            className="input input-md w-full"
+            className="input-field input-md w-full text-ink"
             placeholder="-2 or +12"
             value={delta}
             onChange={(e) => setDelta(e.target.value)}
@@ -451,13 +451,13 @@ function AdjustModal({ open, product, onClose, onSaved }) {
           />
         </Field>
         <Field label="Reason / note">
-          <input className="input input-md w-full" placeholder="Delivery, breakage…" value={note} onChange={(e) => setNote(e.target.value)} />
+          <input className="input-field input-md w-full text-ink" placeholder="Delivery, breakage…" value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
         <div className="modal-action">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>
             Cancel
           </button>
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={busy || !Number(delta)}>
+          <button className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={busy || !Number(delta)}>
             Apply
           </button>
         </div>
@@ -506,11 +506,11 @@ function RecipeModal({ open, product, products, onClose }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`<FlaskConical className="h-5 w-5" /> Recipe · ${product.name}`} wide>
+    <Modal open={open} onClose={onClose} title={`Recipe · ${product.name}`} wide>
       <div className="space-y-3">
-        <p className="text-xs opacity-60">
+        <p className="text-xs text-mute">
           Composite products are not stocked themselves — selling one deducts these ingredients instead.
-          Estimated ingredient cost: <b>{money(Math.round(estCost * 100) / 100)}</b>
+          Estimated ingredient cost: <b className="text-ink">{money(Math.round(estCost * 100) / 100)}</b>
         </p>
         {!components ? (
           <Spinner />
@@ -518,12 +518,12 @@ function RecipeModal({ open, product, products, onClose }) {
           <>
             <ul className="space-y-2">
               {components.map((c) => (
-                <li key={c.componentId} className="flex items-center gap-2 rounded-lg bg-base-200 p-2 text-sm">
-                  <span className="flex-1 truncate font-medium">{c.name}</span>
-                  <span className="font-mono text-xs opacity-50">stock {Number(c.stock)}</span>
+                <li key={c.componentId} className="flex items-center gap-2 rounded-lg bg-panel p-2 text-sm">
+                  <span className="flex-1 truncate font-medium text-ink">{c.name}</span>
+                  <span className="font-data text-xs text-mute">stock {Number(c.stock)}</span>
                   <input
                     type="number" min="0" step="0.001"
-                    className="input input-sm w-24 text-right"
+                    className="input input-sm w-24 text-right text-ink"
                     value={c.quantity}
                     onChange={(e) =>
                       setComponents((cs) =>
@@ -532,7 +532,7 @@ function RecipeModal({ open, product, products, onClose }) {
                     }
                   />
                   <button
-                    className="btn btn-ghost btn-xs text-error"
+className="btn-ghost btn-xs text-warn"
                     onClick={() => save(components.filter((x) => x.componentId !== c.componentId))}
                   >
                     <X className="h-3 w-3" />
@@ -540,16 +540,16 @@ function RecipeModal({ open, product, products, onClose }) {
                 </li>
               ))}
               {components.length === 0 && (
-                <li className="rounded-lg bg-base-200 p-3 text-center text-sm opacity-60">
+                <li className="rounded-lg bg-panel p-3 text-center text-sm text-mute">
                   No ingredients yet — this product stocks and sells as a plain item.
                 </li>
               )}
             </ul>
 
-            <div className="flex flex-wrap items-end gap-2 border-t border-base-300 pt-3">
+            <div className="flex flex-wrap items-end gap-2 border-t border-line pt-3">
               <label className="flex-1">
-                <span className="mb-1 block text-sm opacity-70">Add ingredient</span>
-                <select className="select select-md w-full" value={pickId} onChange={(e) => setPickId(e.target.value)}>
+                <span className="mb-1 block text-sm text-mute">Add ingredient</span>
+                <select className="select-field input-md w-full text-ink" value={pickId} onChange={(e) => setPickId(e.target.value)}>
                   <option value="">Select product…</option>
                   {candidates.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -557,11 +557,11 @@ function RecipeModal({ open, product, products, onClose }) {
                 </select>
               </label>
               <label>
-                <span className="mb-1 block text-sm opacity-70">Qty per sale</span>
-                <input type="number" min="0" step="0.001" className="input input-md w-24" value={pickQty} onChange={(e) => setPickQty(e.target.value)} />
+                <span className="mb-1 block text-sm text-mute">Qty per sale</span>
+                <input type="number" min="0" step="0.001" className="input input-md w-24 text-ink" value={pickQty} onChange={(e) => setPickQty(e.target.value)} />
               </label>
               <button
-                className={`btn btn-outline ${busy ? 'loading' : ''}`}
+                className={`btn-outline text-ink border-line hover:bg-panel hover:text-ink ${busy ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={!pickId || !(Number(pickQty) > 0)}
                 onClick={() => {
                   save([...components, { componentId: pickId, quantity: pickQty }]);
@@ -575,7 +575,7 @@ function RecipeModal({ open, product, products, onClose }) {
           </>
         )}
         <div className="modal-action">
-          <button className="btn btn-primary" onClick={onClose}>Done</button>
+          <button className="btn-cta" onClick={onClose}>Done</button>
         </div>
       </div>
     </Modal>
@@ -636,9 +636,9 @@ function CategoriesModal({ open, onClose, onChanged }) {
         <div className="space-y-4">
           <form onSubmit={add} className="flex flex-wrap items-end gap-2">
             <label className="flex-1">
-              <span className="mb-1 block text-sm opacity-70">New category</span>
+              <span className="mb-1 block text-sm text-mute">New category</span>
               <input
-                className="input input-md w-full"
+                className="input-field input-md w-full text-ink"
                 placeholder="Name"
                 value={newCat.name}
                 onChange={(e) => setNewCat((c) => ({ ...c, name: e.target.value }))}
@@ -646,36 +646,36 @@ function CategoriesModal({ open, onClose, onChanged }) {
               />
             </label>
             <label>
-              <span className="mb-1 block text-sm opacity-70">Color</span>
+              <span className="mb-1 block text-sm text-mute">Color</span>
               <input
                 type="color"
-                className="h-10 w-14 rounded border border-base-300"
+                className="h-10 w-14 rounded border border-line"
                 value={newCat.color}
                 onChange={(e) => setNewCat((c) => ({ ...c, color: e.target.value }))}
               />
             </label>
-            <button className="btn btn-primary btn-md">Add</button>
+            <button className="btn-cta btn-md">Add</button>
           </form>
 
           <ul className="space-y-2">
             {list.map((cat) => (
-              <li key={cat.id} className="flex items-center gap-2 rounded-lg bg-base-200 p-2">
+              <li key={cat.id} className="flex items-center gap-2 rounded-lg bg-panel p-2">
                 <input
                   type="color"
-                  className="h-9 w-11 shrink-0 rounded border border-base-300"
+                  className="h-9 w-11 shrink-0 rounded border border-line"
                   value={cat.color}
                   onChange={(e) => setList((l) => l.map((c) => (c.id === cat.id ? { ...c, color: e.target.value } : c)))}
                 />
                 <input
-                  className="input input-sm flex-1"
+                  className="input input-sm flex-1 text-ink"
                   value={cat.name}
                   onChange={(e) => setList((l) => l.map((c) => (c.id === cat.id ? { ...c, name: e.target.value } : c)))}
                 />
-                <span className="whitespace-nowrap text-xs opacity-50">{cat.productCount} products</span>
-                <button className="btn btn-ghost btn-xs" onClick={() => update(cat)}>
+                <span className="whitespace-nowrap text-xs text-mute">{cat.productCount} products</span>
+                <button className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink" onClick={() => update(cat)}>
                   <Save className="h-4 w-4" />
                 </button>
-                <button className="btn btn-ghost btn-xs text-error" onClick={() => remove(cat)}>
+                <button className="btn btn-ghost btn-xs text-warn" onClick={() => remove(cat)}>
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>

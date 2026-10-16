@@ -38,6 +38,7 @@ export default function POS() {
     }
   });
   const searchRef = useRef(null);
+  let tax, total;
 
   function persistHeld(next) {
     setHeld(next);
@@ -104,7 +105,7 @@ export default function POS() {
     if (!products) return [];
     const searching = Boolean(search.trim());
     let list = searching
-      ? products // search reaches into variant children too
+      ? products
       : products.filter((p) => !p.parentId);
     if (activeCategory) list = list.filter((p) => p.categoryId === activeCategory);
     if (searching) {
@@ -181,13 +182,10 @@ export default function POS() {
   const taxRate = Number(tenant?.taxRate ?? 0);
   const taxInclusive = tenant?.taxInclusive ?? false;
 
-  let tax, total;
   if (taxInclusive) {
-    // Prices include tax — extract the tax portion
     tax = Math.round(((subtotal - discountNum) * taxRate) / (100 + taxRate) * 100) / 100;
     total = Math.max(subtotal - discountNum, 0);
   } else {
-    // Standard: tax added on top
     tax = Math.round(((subtotal - discountNum) * taxRate * 100) / 100) / 100;
     total = Math.max(subtotal - discountNum + tax, 0);
   }
@@ -207,7 +205,6 @@ export default function POS() {
       return line ? { ...p, stock: Math.max(p.stock - line.quantity, 0) } : p;
     }));
     flushQueue().catch(() => {});
-    // Kick the cash drawer when cash crossed the counter (best-effort).
     if (tenant?.openDrawerOnCash !== false && (order.payments ?? []).some((p) => p.method === 'cash')) {
       kickCashDrawer().catch(() => {});
     }
@@ -224,7 +221,6 @@ export default function POS() {
     toast.info('Sale saved offline — it will sync automatically');
   }
 
-  // Live customer-facing display over BroadcastChannel.
   useEffect(() => {
     try {
       const ch = new BroadcastChannel('novapos-register');
@@ -248,8 +244,8 @@ export default function POS() {
         <div className="flex flex-wrap items-center gap-2">
           <input
             ref={searchRef}
-            className="input input-md w-full max-w-xs"
-            placeholder="Search or scan…  ( / )"
+            className="input-field input-md w-full max-w-xs text-ink"
+            placeholder="Search or scan… (/)"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
@@ -258,10 +254,12 @@ export default function POS() {
                 setSearch('');
               }
             }}
+            autoComplete="off"
+            aria-label="Search products"
           />
-          <div className="join">
+          <div className="flex items-center gap-1">
             <button
-              className={`btn btn-sm join-item ${activeCategory === '' ? 'btn-primary' : ''}`}
+              className={`btn-cta btn-xs ${activeCategory === '' ? '' : 'opacity-50'}`}
               onClick={() => setActiveCategory('')}
             >
               All
@@ -269,7 +267,7 @@ export default function POS() {
             {categories.map((c) => (
               <button
                 key={c.id}
-                className={`btn btn-sm join-item ${activeCategory === c.id ? 'btn-primary' : ''}`}
+                className={`flex items-center gap-1.5 btn-ghost btn-xs text-ink border border-line rounded-lg hover:bg-panel hover:text-accent ${activeCategory === c.id ? 'bg-accent-dim text-accent border-accent' : ''}`}
                 onClick={() => setActiveCategory(c.id)}
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: c.color }}></span>
@@ -281,7 +279,7 @@ export default function POS() {
 
         <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
           {visible.length === 0 ? (
-            <EmptyState icon={<Search className="mx-auto h-12 w-12 opacity-30" />} title="No products match" subtitle="Try another search or category." />
+            <EmptyState icon={<Search className="mx-auto h-12 w-12 text-mute" />} title="No products match" subtitle="Try another search or category." />
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {visible.map((p) => {
@@ -293,25 +291,25 @@ export default function POS() {
                     key={p.id}
                     disabled={out}
                     onClick={() => handlePick(p)}
-                    className={`card relative border border-base-300 bg-base-100 text-left shadow-sm transition hover:border-primary/50 hover:shadow ${
-                      out ? 'opacity-40' : ''
+                    className={`card-counter relative border border-line bg-paper text-left transition hover:border-accent/50 ${
+                      out ? 'opacity-50' : ''
                     }`}
                   >
-                    <div className="card-body items-center gap-1 p-3 text-center">
+                    <div className="p-3 text-center">
                       {(out || low) && (
-                        <span className={`badge badge-xs absolute right-2 top-2 ${out ? 'badge-error' : 'badge-warning'}`}>
+                        <span className={`badge-pill badge-sm absolute right-2 top-2 ${out ? 'fill-warn' : 'warn'}`}>
                           {out ? 'Out' : `${Number(p.stock)} left`}
                         </span>
                       )}
                       {inCart > 0 && (
-                        <span className="badge badge-primary badge-xs absolute left-2 top-2">{inCart}</span>
+                        <span className="badge-pill badge-sm fill-accent absolute left-2 top-2">{inCart}</span>
                       )}
-                      <span className="line-clamp-2 min-h-8 text-sm font-medium leading-4">{p.name}</span>
-                      {p.variantLabel && <span className="text-[10px] uppercase opacity-50">{p.variantLabel}</span>}
-                      <span className="text-sm font-bold text-primary">
+                      <span className="line-clamp-2 min-h-[2rem] text-sm font-medium leading-4 text-ink">{p.name}</span>
+                      {p.variantLabel && <span className="text-[10px] uppercase text-mute">{p.variantLabel}</span>}
+                      <span className="text-sm font-bold text-accent font-data block mt-1">
                         {money(p.price)}{p.unitLabel ? ` / ${p.unitLabel}` : ''}
                       </span>
-                      {p.hasChildren && <span className="text-[10px] opacity-40">tap to pick variant</span>}
+                      {p.hasChildren && <span className="text-[10px] text-mute">tap to pick variant</span>}
                     </div>
                   </button>
                 );
@@ -321,22 +319,22 @@ export default function POS() {
         </div>
       </section>
 
-      <aside className="card order-first h-fit bg-base-100 shadow lg:order-none lg:sticky lg:top-0">
-        <div className="card-body gap-3 p-4">
+      <aside className="card-counter order-first h-fit bg-paper lg:order-none lg:sticky lg:top-0 lg:-top-4">
+        <div className="gap-3 p-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold">Current sale</h2>
+            <h2 className="font-bold tracking-tight text-ink">Current sale</h2>
             <div className="flex items-center gap-1">
               {held.length > 0 && (
-                <button className="btn btn-ghost btn-xs" onClick={() => setHeldOpen(true)}>
-                  <Ticket className="h-4 w-4" /> {held.length}
+                <button className="btn-ghost btn-xs" onClick={() => setHeldOpen(true)} title="View parked tickets">
+                  <Ticket className="h-4 w-4" aria-hidden="true" /> {held.length}
                 </button>
               )}
               {cart.length > 0 && (
                 <>
-                  <button className="btn btn-ghost btn-xs" onClick={holdTicket} title="Park this ticket">
+                  <button className="btn-ghost btn-xs" onClick={holdTicket} title="Park this ticket">
                     Hold
                   </button>
-                  <button className="btn btn-ghost btn-xs text-error" onClick={() => setCart([])}>
+                  <button className="btn-ghost btn-xs text-warn" onClick={() => setCart([])} title="Clear cart">
                     Clear
                   </button>
                 </>
@@ -346,17 +344,17 @@ export default function POS() {
           </div>
 
           {cart.length === 0 ? (
-            <p className="py-8 text-center text-sm opacity-50">Tap products to add them.</p>
+            <p className="py-8 text-center text-xs text-mute">Tap products to add them.</p>
           ) : (
-            <ul className="max-h-72 space-y-2 overflow-y-auto">
+            <ul className="max-h-[20rem] space-y-2 overflow-y-auto">
               {cart.map((l) => (
-                <li key={l.product.id} className="flex items-center gap-2 rounded-lg bg-base-200 p-2">
+                <li key={l.product.id} className="flex items-center gap-2 rounded-lg bg-panel p-2">
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">
+                    <div className="truncate text-sm font-medium text-ink">
                       {l.product.name}
-                      {l.product.variantLabel && <span className="ml-1 opacity-60">· {l.product.variantLabel}</span>}
+                      {l.product.variantLabel && <span className="ml-1 text-xs text-mute">· {l.product.variantLabel}</span>}
                     </div>
-                    <div className="text-xs opacity-60">{money(l.product.price)} ea</div>
+                    <div className="text-xs text-mute">{money(l.product.price)} ea</div>
                   </div>
                   {l.product.soldBy !== 'unit' ? (
                     <input
@@ -364,7 +362,7 @@ export default function POS() {
                       min="0"
                       step="0.001"
                       max={l.product.stock}
-                      className="input input-xs w-20 text-right font-mono"
+                      className="input-field input-xs w-20 text-right font-data text-ink"
                       value={l.qty}
                       onChange={(e) => {
                         const v = Math.min(Math.max(Number(e.target.value) || 0, 0), l.product.stock);
@@ -372,12 +370,12 @@ export default function POS() {
                       }}
                     />
                   ) : (
-                    <div className="join">
-                      <button aria-label="Decrease quantity" className="btn btn-sm join-item min-h-11 min-w-11 px-0" onClick={() => setQty(l.product.id, l.qty - 1)}>-</button>
-                      <span aria-live="polite" className="btn btn-sm join-item pointer-events-none min-h-11 w-11 px-0 font-mono">{l.qty}</span>
+                    <div className="flex items-center gap-1">
+                      <button aria-label="Decrease quantity" className="btn-ghost btn-xs min-h-[2.5rem] min-w-[2.5rem] px-0" onClick={() => setQty(l.product.id, l.qty - 1)}>-</button>
+                      <span aria-live="polite" className="btn-ghost btn-xs min-h-[2.5rem] w-[2.5rem] px-0 font-data text-ink pointer-events-none text-center">{l.qty}</span>
                       <button
                         aria-label="Increase quantity"
-                        className="btn btn-sm join-item min-h-11 min-w-11 px-0"
+                        className="btn-ghost btn-xs min-h-[2.5rem] min-w-[2.5rem] px-0"
                         onClick={() => setQty(l.product.id, l.qty + 1)}
                         disabled={l.qty >= l.product.stock}
                       >
@@ -385,20 +383,19 @@ export default function POS() {
                       </button>
                     </div>
                   )}
-                  <span className="w-16 text-right text-sm font-semibold">{money(l.product.price * l.qty)}</span>
+                  <span className="w-16 text-right text-sm font-semibold font-data text-ink">{money(l.product.price * l.qty)}</span>
                 </li>
               ))}
             </ul>
           )}
-
-          <div className="space-y-2">
-            <div className="form-control">
-              <label className="mb-1 flex items-center justify-between text-sm">
-                <span className="opacity-70">Discount type</span>
-                {!hasPerm('discounts') && <span className="badge badge-ghost badge-xs">no permission</span>}
+        <div className="space-y-2">
+          <div className="field">
+              <label className="mb-1 flex items-center justify-between text-xs text-mute">
+                <span>Discount type</span>
+                {!hasPerm('discounts') && <span className="badge-pill badge-sm text-mute border border-line">no permission</span>}
               </label>
               <select
-                className={`select select-sm w-full ${hasPerm('discounts') ? '' : 'select-disabled'}`}
+                className={`select-field input-sm w-full text-ink ${hasPerm('discounts') ? '' : 'opacity-50 cursor-not-allowed'}`}
                 value={discountType}
                 disabled={!hasPerm('discounts')}
                 onChange={(e) => {
@@ -414,15 +411,15 @@ export default function POS() {
               </select>
             </div>
             {discountType !== 'senior' && discountType !== 'pwd' && (
-              <div className="form-control">
-                <label className="mb-1 text-sm opacity-70">
+              <div className="field">
+                <label className="mb-1 text-xs text-mute">
                   {discountType === 'percentage' ? `Discount (%)${maxPct < 100 ? ` · max ${maxPct}%` : ''}` : 'Discount ($)'}
                 </label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  className={`input input-sm w-full ${hasPerm('discounts') ? '' : 'input-disabled'}`}
+                  className={`input-field input-sm w-full text-ink ${hasPerm('discounts') ? '' : 'opacity-50 cursor-not-allowed'}`}
                   placeholder={discountType === 'percentage' ? '0' : '0.00'}
                   value={discountType === 'percentage' ? discount : (hasPerm('discounts') ? discount : '')}
                   disabled={!hasPerm('discounts')}
@@ -431,19 +428,23 @@ export default function POS() {
               </div>
             )}
             {(discountType === 'senior' || discountType === 'pwd') && (
-              <div className="space-y-2 rounded-xl bg-warning/10 p-2 text-xs">
-                <div className="font-bold text-warning">
+              <div className="space-y-2 rounded-lg bg-warn-dim p-2 text-xs border border-warn/20">
+                <div className="font-bold text-warn">
                   {discountType === 'senior' ? 'Senior Citizen' : 'PWD'} — 20% discount + VAT exempt
                 </div>
-                <input
-                  className="input input-xs w-full"
-                  placeholder="Beneficiary full name"
-                  value={beneficiaryName}
-                  onChange={(e) => setBeneficiaryName(e.target.value)}
-                />
-                <div className="flex gap-1">
+                <div className="flex items-end gap-2">
+                  <label className="text-[10px] uppercase tracking-wider text-mute block">Beneficiary full name</label>
+                  <input
+                    className="input-field input-xs w-full text-ink"
+                    placeholder="Beneficiary full name"
+                    value={beneficiaryName}
+                    onChange={(e) => setBeneficiaryName(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-1 items-end">
+                  <label className="text-[10px] uppercase tracking-wider text-mute block w-24">ID type</label>
                   <select
-                    className="select select-xs w-24"
+                    className="select-field input-xs w-24 text-ink"
                     value={beneficiaryIdType}
                     onChange={(e) => setBeneficiaryIdType(e.target.value)}
                   >
@@ -452,40 +453,49 @@ export default function POS() {
                     <option value="postal">Postal</option>
                     <option value="other">Other</option>
                   </select>
-                  <input
-                    className="input input-xs flex-1"
-                    placeholder="ID number"
-                    value={beneficiaryIdNumber}
-                    onChange={(e) => setBeneficiaryIdNumber(e.target.value)}
-                  />
+                  <div className="flex-1">
+                    <label className="text-[10px] uppercase tracking-wider text-mute block">ID number</label>
+                    <input
+                      className="input-field input-xs w-full text-ink"
+                      placeholder="ID number"
+                      value={beneficiaryIdNumber}
+                      onChange={(e) => setBeneficiaryIdNumber(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="space-y-1 border-t border-base-300 pt-3 text-sm">
-            <Row label="Subtotal" value={money(subtotal)} />
+          <div className="space-y-1 border-t border-line pt-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-mute">Subtotal</span>
+              <span className="font-data text-ink">{money(subtotal)}</span>
+            </div>
             {discountNum > 0 && (
-              <Row
-                label={isScPwd ? `${discountType === 'senior' ? 'Senior' : 'PWD'} (20%)` : 'Discount'}
-                value={`-${money(discountNum)}`}
-              />
+              <div className="flex justify-between">
+                <span className="text-mute">{isScPwd ? `${discountType === 'senior' ? 'Senior' : 'PWD'} (20%)` : 'Discount'}</span>
+                <span className="font-data text-warn">-{money(discountNum)}</span>
+              </div>
             )}
-            <Row label={`Tax (${taxRate}%)`} value={money(tax)} />
-            <div className="flex justify-between pt-1 text-lg font-bold">
+            <div className="flex justify-between">
+              <span className="text-mute">Tax ({taxRate}%)</span>
+              <span className="font-data text-ink">{money(tax)}</span>
+            </div>
+            <div className="flex justify-between pt-1 text-lg font-bold text-ink">
               <span>Total</span>
-              <span>{money(total)}</span>
+              <span className="font-data">{money(total)}</span>
             </div>
           </div>
 
           <button
-            className="btn btn-primary btn-block"
+            className="btn-cta btn-block"
             disabled={cart.length === 0 || total <= 0}
             onClick={() => setPaymentOpen(true)}
           >
             Charge {money(total)}
           </button>
-          <p className="text-center text-xs opacity-40">
+          <p className="text-center text-xs text-mute">
             Signed in as {user?.name} · {tenant?.name}
           </p>
         </div>
@@ -499,7 +509,7 @@ export default function POS() {
               .map((v) => (
                 <li key={v.id}>
                   <button
-                    className={`btn btn-block justify-between ${v.stock <= 0 ? 'btn-disabled' : ''}`}
+                    className={`btn-ghost btn-block justify-between ${v.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     disabled={v.stock <= 0}
                     onClick={() => {
                       setVariantParent(null);
@@ -507,12 +517,12 @@ export default function POS() {
                     }}
                   >
                     <span>{v.variantLabel || v.name}</span>
-                    <span className="font-bold">{money(v.price)}</span>
+                    <span className="font-bold text-ink">{money(v.price)}</span>
                   </button>
                 </li>
               ))}
             {products.filter((p) => p.parentId === variantParent.id && p.isActive).length === 0 && (
-              <p className="text-center text-sm opacity-60">No active variants yet.</p>
+              <p className="text-center text-sm text-mute">No active variants yet.</p>
             )}
           </ul>
         )}
@@ -544,20 +554,20 @@ export default function POS() {
 
       <Modal open={heldOpen} onClose={() => setHeldOpen(false)} title={`Held tickets · ${held.length}`}>
         {held.length === 0 ? (
-          <p className="py-4 text-center text-sm opacity-60">Nothing parked.</p>
+          <p className="py-4 text-center text-sm text-mute">Nothing parked.</p>
         ) : (
           <ul className="space-y-2">
             {held.map((h) => (
-              <li key={h.id} className="flex items-center gap-3 rounded-lg bg-base-200 p-2 text-sm">
+              <li key={h.id} className="flex items-center gap-3 rounded-lg bg-panel p-2 text-sm">
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium">
+                  <div className="font-medium text-ink">
                     {h.lines.length} item{h.lines.length > 1 ? 's' : ''} ·{' '}
                     {money(h.total ?? h.lines.reduce((s, l) => s + l.product.price * l.qty, 0))}
                   </div>
-                  <div className="text-xs opacity-60">{fmtDateTime(h.ts)}</div>
+                  <div className="text-xs text-mute">{fmtDateTime(h.ts)}</div>
                 </div>
                 <button
-                  className="btn btn-primary btn-xs"
+                  className="btn-cta btn-xs"
                   onClick={() => {
                     recallTicket(h);
                     toast.success('Ticket recalled');
@@ -566,7 +576,7 @@ export default function POS() {
                   Recall
                 </button>
                 <button
-                  className="btn btn-ghost btn-xs text-error"
+                  className="btn-ghost btn-xs text-warn"
                   onClick={() => persistHeld(held.filter((x) => x.id !== h.id))}
                 >
                   <X className="h-3 w-3" />
@@ -581,17 +591,30 @@ export default function POS() {
         {receiptOrder && (
           <>
             <Receipt order={receiptOrder} />
-            <div className="modal-action print:hidden">
-              <button className="btn" onClick={() => window.print()}>
-                <Printer className="mr-1 inline h-4 w-4" /> Print
+            <div className="modal-action print-hidden">
+              <button className="btn-ghost text-ink border border-line hover:bg-panel hover:text-ink" onClick={() => window.print()}>
+                <Printer className="mr-1 inline h-4 w-4" aria-hidden="true" /> Print
               </button>
-              <button className="btn btn-primary" onClick={() => setReceiptOrder(null)}>
+              <button className="btn-cta" onClick={() => setReceiptOrder(null)}>
                 New sale
               </button>
             </div>
           </>
         )}
       </Modal>
+
+      {/* ── Receipt strip — signature: live transaction, thermal paper aesthetic ── */}
+      <div className="receipt-strip">
+        <div className="strip-divider" />
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-2 text-xs text-mute">
+            <span className="font-bold text-ink">Sale in progress</span>
+            <span className="strip-items">{cart.length} item{cart.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+        <span className="strip-total">{money(total)}</span>
+        <div className="strip-time">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+      </div>
     </div>
   );
 }
@@ -599,8 +622,8 @@ export default function POS() {
 function Row({ label, value }) {
   return (
     <div className="flex justify-between">
-      <span className="opacity-60">{label}</span>
-      <span>{value}</span>
+      <span className="text-mute">{label}</span>
+      <span className="font-data text-ink">{value}</span>
     </div>
   );
 }
@@ -629,7 +652,7 @@ function WeightPrompt({ product, money, onClose, onConfirm }) {
             min="0"
             step="0.001"
             max={Number(product.stock)}
-            className="input input-lg w-full text-right text-xl font-bold"
+            className="input-field input-lg w-full text-right text-xl font-bold font-data text-ink"
             value={qty}
             onChange={(e) => {
               setQty(e.target.value);
@@ -639,10 +662,10 @@ function WeightPrompt({ product, money, onClose, onConfirm }) {
           />
         </Field>
         {num > Number(product.stock) && (
-          <p className="text-sm text-error">Only {Number(product.stock)} {product.unitLabel || ''} in stock.</p>
+          <p className="text-sm text-warn">Only {Number(product.stock)} {product.unitLabel || ''} in stock.</p>
         )}
         <button
-          className={`btn btn-primary btn-block ${!qty ? 'btn-disabled' : ''}`}
+          className={`btn-cta btn-block ${!qty ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={!(num > 0) || num > Number(product.stock) + 1e-9}
           onClick={() => onConfirm(num)}
         >
@@ -694,8 +717,6 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
       setCustomerId('');
       setCouponCode('');
       setRedeemPoints('');
-      // One key per payment session: retries and offline replays reuse it,
-      // so the server can never double-charge this sale.
       api('/customers').then(setCustomers).catch(() => {});
     }
   }, [open, total]);
@@ -792,7 +813,7 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Field label={customerMissing ? 'Customer · required' : 'Customer'}>
             <select
-              className={`select select-sm w-full ${customerMissing ? 'select-error' : ''}`}
+              className={`select-field input-sm w-full text-ink ${customerMissing ? 'border-warn' : ''}`}
               value={customerId}
               onChange={(e) => {
                 setCustomerId(e.target.value);
@@ -810,7 +831,7 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
           </Field>
           <Field label="Coupon code">
             <input
-              className="input input-sm w-full font-mono uppercase"
+              className="input-field input-sm w-full font-data text-ink uppercase"
               placeholder="Optional"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
@@ -830,7 +851,7 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
               type="number"
               min="0"
               max={customer?.loyaltyPoints ?? 0}
-              className="input input-sm w-full"
+              className="input-field input-sm w-full text-ink"
               placeholder="0"
               disabled={!customerId || !customer?.loyaltyPoints}
               value={redeemPoints}
@@ -845,7 +866,7 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
 
         {tipsEnabled && (
           <div>
-            <span className="mb-1 block text-sm opacity-70">Tip</span>
+            <span className="mb-1 block text-xs text-mute">Tip</span>
             <div className="flex flex-wrap items-center gap-2">
               {[0, ...tipSuggestions].map((pct) => {
                 const pctAmount = (total * pct) / 100;
@@ -854,7 +875,7 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
                   <button
                     key={pct}
                     type="button"
-                    className={`btn btn-sm ${active ? 'btn-primary' : 'btn-outline'}`}
+                    className={`btn-ghost btn-xs text-ink border border-line hover:bg-panel ${active ? 'bg-accent text-accent border-accent' : ''}`}
                     onClick={() => setTip(pctAmount.toFixed(2))}
                   >
                     {pct === 0 ? 'No tip' : `${pct}%`}
@@ -865,7 +886,7 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
                 type="number"
                 step="0.01"
                 min="0"
-                className="input input-sm w-28 text-right"
+                className="input-field input-sm w-28 text-right text-ink"
                 placeholder="Custom"
                 value={tip}
                 onChange={(e) => setTip(e.target.value)}
@@ -875,11 +896,11 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
         )}
 
         <div className="space-y-2">
-          <span className="block text-sm font-medium opacity-80">Tender</span>
+          <span className="block text-xs font-medium text-mute">Tender</span>
           {lines.map((l, idx) => (
             <div key={l.key} className="flex flex-wrap items-center gap-2">
               <select
-                className="select select-sm w-36"
+                className="select-field input-sm w-36 text-ink"
                 value={l.method}
                 onChange={(e) => updateLine(l.key, { method: e.target.value })}
               >
@@ -889,19 +910,19 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
                   </option>
                 ))}
               </select>
-              <div className="join">
+              <div className="flex items-center gap-1">
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   placeholder="0.00"
-                  className="input input-sm join-item w-24 text-right"
+                  className="input-field input-sm w-24 text-right text-ink"
                   value={l.amount}
                   onChange={(e) => updateLine(l.key, { amount: e.target.value })}
                 />
                 <button
                   type="button"
-                  className="btn btn-sm join-item"
+                  className="btn-ghost btn-xs"
                   title="Fill exact remainder"
                   onClick={() => fillRemaining(l.key)}
                 >
@@ -910,7 +931,7 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
               </div>
               {['card', 'card_terminal', 'mobile', 'gift_card', 'gcash', 'maya', 'qr_ph', 'instapay', 'pesonet'].includes(l.method) && (
                 <input
-                  className="input input-sm w-40"
+                  className="input-field input-sm w-40 text-ink"
                   placeholder={l.method === 'gift_card' ? 'Gift card code' : 'Reference'}
                   value={l.reference}
                   onChange={(e) => updateLine(l.key, { reference: e.target.value })}
@@ -922,7 +943,7 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
                     <button
                       key={amt}
                       type="button"
-                      className="btn btn-outline btn-xs"
+                      className="btn-outline btn-xs text-ink border border-line hover:bg-panel hover:text-accent"
                       onClick={() => fillQuick(amt)}
                     >
                       {money(amt)}
@@ -933,10 +954,11 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
               {lines.length > 1 && (
                 <button
                   type="button"
-                  className="btn btn-ghost btn-sm text-error"
+                  className="btn-ghost btn-xs text-warn"
+                  aria-label="Remove payment line"
                   onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -944,7 +966,7 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
           {lines.length < 5 && (
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
+              className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink"
               onClick={() => setLines((ls) => [...ls, defaultTenderLine(defaultMethod)])}
             >
               + Split across another payment
@@ -952,21 +974,21 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
           )}
         </div>
 
-        <div className="space-y-1 rounded-xl bg-base-200 p-3 text-sm">
+        <div className="space-y-1 rounded-lg bg-panel p-3 text-sm border border-line">
           <Row label={`Items & tax`} value={money(total)} />
           {tipNum > 0 && <Row label="Tip" value={money(tipNum)} />}
-          <div className="flex justify-between border-t border-base-300 pt-1 font-bold">
+          <div className="flex justify-between border-t border-line pt-1 font-bold text-ink">
             <span>Total due</span>
-            <span>{money(grand)}</span>
+            <span className="font-data">{money(grand)}</span>
           </div>
           <Row label="Paid so far" value={money(Math.min(paidNum, grand))} />
           {remaining > 0 ? (
-            <div className="flex justify-between font-semibold text-error">
+            <div className="flex justify-between font-semibold text-warn font-data">
               <span>Still owed</span>
               <span>{money(remaining)}</span>
             </div>
           ) : change > 0 ? (
-            <div className="flex justify-between font-semibold text-success">
+            <div className="flex justify-between font-semibold text-accent font-data">
               <span>Change due</span>
               <span>{money(change)}</span>
             </div>
@@ -974,18 +996,18 @@ function PaymentModal({ open, onClose, total, cart, discount, discountType, bene
         </div>
 
         <div className="modal-action">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>
             Cancel
           </button>
           <button
-            className={`btn ${canLayaway ? 'btn-outline' : 'btn-disabled'} ${busy ? 'loading' : ''}`}
+            className={`btn-outline text-warn border-warn hover:bg-warn-dim ${busy ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={!canLayaway || busy}
             onClick={() => submit('layaway')}
           >
             Layaway · {money(paidNum)} down
           </button>
           <button
-            className={`btn btn-primary ${busy ? 'loading' : ''}`}
+            className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={!canComplete || busy}
             onClick={() => submit('now')}
           >

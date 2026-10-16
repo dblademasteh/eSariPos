@@ -37,22 +37,25 @@ export default function Audit() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div>
-          <h1 className="text-xl font-bold">Audit log</h1>
-          <p className="text-sm opacity-60">Admin and user actions across the business</p>
+      <div className="receipt-head">
+        <div className="receipt-meta">
+          <span className="font-bold">eSariPOS</span>
+          <span className="dot" aria-hidden="true"></span>
+          <span>{new Date().toLocaleDateString()}</span>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <select className="select select-sm" value={action} onChange={(e) => setAction(e.target.value)}>
+        <h1 className="text-xl font-bold">Audit log</h1>
+        <p className="text-sm opacity-60">Admin and user actions across the business</p>
+        <div className="ml-auto flex items-center gap-2 mt-2">
+          <select className="select-field input-sm" value={action} onChange={(e) => setAction(e.target.value)}>
             <option value="">All actions</option>
             {actions.map((a) => (
               <option key={a} value={a}>{a}</option>
             ))}
           </select>
-          <input className="input input-sm w-44" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input className="input-field input-sm w-44" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
           {visible.length > 0 && (
             <button
-              className="btn btn-outline btn-sm"
+              className="btn-outline btn-sm"
               onClick={() =>
                 downloadCsv(`audit-log`, [
                   { key: 'when', label: 'When', value: (e) => new Date(e.createdAt).toLocaleString() },
@@ -72,10 +75,10 @@ export default function Audit() {
       {!entries ? (
         <Spinner />
       ) : visible.length === 0 ? (
-        <EmptyState icon={<ScrollText className="mx-auto h-12 w-12 opacity-30" />} title="No audit entries match" />
+        <EmptyState icon={<ScrollText className="mx-auto h-12 w-12 opacity-30" />} title="No entries match your search" />
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
-          <table className="table">
+        <div className="overflow-x-auto card-counter">
+          <table className="table-counter">
             <thead>
               <tr>
                 <th>When</th>
@@ -90,7 +93,7 @@ export default function Audit() {
                 <tr key={e.id}>
                   <td className="whitespace-nowrap text-xs opacity-70">{fmtDateTime(e.createdAt)}</td>
                   <td className="whitespace-nowrap font-medium">{e.staffName}</td>
-                  <td><span className="badge badge-ghost badge-sm font-mono">{e.action}</span></td>
+                  <td><span className="badge-pill badge-sm font-data">{e.action}</span></td>
                   <td className="font-mono text-xs">
                     {e.entity ?? '—'}
                     {e.entityId ? ` · ${String(e.entityId).slice(0, 8)}…` : ''}

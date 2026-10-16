@@ -37,29 +37,29 @@ export default function PinPad({ title, onDone, onCancel, confirmLabel = 'Confir
       <h3 className="text-center text-lg font-bold">{title}</h3>
       <div className="flex justify-center gap-2 py-1">
         {Array.from({ length: 8 }).map((_, i) => (
-          <span key={i} className={`h-3 w-3 rounded-full ${i < digits.length ? 'bg-primary' : 'bg-base-300'}`} />
+          <span key={i} className={`h-3 w-3 rounded-full ${i < digits.length ? 'bg-accent' : 'bg-panel'}`} />
         ))}
       </div>
-      {error && <p className="text-center text-sm text-error">{error}</p>}
+      {error && <p className="text-center text-sm text-warn">{error}</p>}
       <div className="mx-auto grid max-w-[240px] grid-cols-3 gap-2">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
-          <button key={d} type="button" className="btn btn-lg" onClick={() => press(d)}>
+          <button key={d} type="button" className="btn-ghost btn-lg" onClick={() => press(d)}>
             {d}
           </button>
         ))}
-        <button type="button" className="btn btn-ghost btn-lg" onClick={() => setDigits((v) => v.slice(0, -1))}>
-          <Delete className="h-5 w-5" />
+        <button type="button" className="btn-ghost btn-sm" onClick={() => setDigits((v) => v.slice(0, -1))} aria-label="Delete last digit">
+          <Delete className="h-5 w-5" aria-hidden="true" />
         </button>
-        <button type="button" className="btn btn-lg" onClick={() => press('0')}>
+        <button type="button" className="btn-ghost btn-lg" onClick={() => press('0')}>
           0
         </button>
-        <button type="button" className={`btn btn-primary btn-lg ${busy ? 'loading' : ''}`} onClick={confirm}>
+        <button type="button" className={`btn-cta btn-lg ${busy ? 'opacity-50 pointer-events-none' : ''}`} onClick={confirm}>
           {confirmLabel}
         </button>
       </div>
       {onCancel && (
         <div className="text-center">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
+          <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>
             Cancel
           </button>
         </div>

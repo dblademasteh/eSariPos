@@ -34,7 +34,7 @@ function ProgressBar({ current, total }) {
         <div
           key={i}
           className={`h-1.5 flex-1 rounded-full transition-colors ${
-            i <= current ? 'bg-primary' : 'bg-base-300'
+            i <= current ? 'bg-accent' : 'bg-panel'
           }`}
         />
       ))}
@@ -51,7 +51,7 @@ function StepBusiness({ data, onChange, onNext }) {
       </div>
       <Field label="Business name">
         <input
-          className="input input-md w-full"
+          className="input-field input-md w-full"
           value={data.businessName}
           onChange={(e) => onChange({ businessName: e.target.value })}
           required
@@ -59,7 +59,7 @@ function StepBusiness({ data, onChange, onNext }) {
       </Field>
       <Field label="Address">
         <input
-          className="input input-md w-full"
+          className="input-field input-md w-full"
           placeholder="123 Main St, Manila"
           value={data.address}
           onChange={(e) => onChange({ address: e.target.value })}
@@ -67,13 +67,13 @@ function StepBusiness({ data, onChange, onNext }) {
       </Field>
       <Field label="Phone">
         <input
-          className="input input-md w-full"
+          className="input-field input-md w-full"
           placeholder="+63 917 123 4567"
           value={data.phone}
           onChange={(e) => onChange({ phone: e.target.value })}
         />
       </Field>
-      <button className="btn btn-primary btn-block" onClick={onNext}>
+      <button className="btn-cta btn-block" onClick={onNext}>
         Next <ChevronRight className="h-4 w-4" />
       </button>
     </div>
@@ -89,7 +89,7 @@ function StepFinancial({ data, onChange, onNext, onBack }) {
       </div>
       <Field label="Currency">
         <select
-          className="select select-md w-full"
+          className="select-field input-md w-full"
           value={data.currency}
           onChange={(e) => onChange({ currency: e.target.value })}
         >
@@ -104,14 +104,14 @@ function StepFinancial({ data, onChange, onNext, onBack }) {
           step="0.01"
           min="0"
           max="100"
-          className="input input-md w-full"
+          className="input-field input-md w-full"
           value={data.taxRate}
           onChange={(e) => onChange({ taxRate: e.target.value })}
         />
       </Field>
       <Field label="Timezone">
         <select
-          className="select select-md w-full"
+          className="select-field input-md w-full"
           value={data.timezone}
           onChange={(e) => onChange({ timezone: e.target.value })}
         >
@@ -120,22 +120,20 @@ function StepFinancial({ data, onChange, onNext, onBack }) {
           ))}
         </select>
       </Field>
-      <div className="form-control">
-        <label className="label cursor-pointer justify-start gap-3">
+      <label className="checkbox-field cursor-pointer justify-start gap-3">
           <input
             type="checkbox"
-            className="checkbox checkbox-primary"
+            className="checkbox-field"
             checked={data.taxInclusive}
             onChange={(e) => onChange({ taxInclusive: e.target.checked })}
           />
-          <span className="label-text">Prices include tax (tax-inclusive)</span>
+          <span className="font-medium text-ink">Prices include tax (tax-inclusive)</span>
         </label>
-      </div>
       <div className="flex gap-2">
-        <button className="btn btn-ghost" onClick={onBack}>
+        <button className="btn-ghost" onClick={onBack}>
           <ChevronLeft className="h-4 w-4" /> Back
         </button>
-        <button className="btn btn-primary flex-1" onClick={onNext}>
+        <button className="btn-cta flex-1" onClick={onNext}>
           Next <ChevronRight className="h-4 w-4" />
         </button>
       </div>
@@ -152,7 +150,7 @@ function StepReceipt({ data, onChange, onNext, onBack }) {
       </div>
       <Field label="Receipt header">
         <input
-          className="input input-md w-full"
+          className="input-field input-md w-full"
           placeholder="Your store name and tagline"
           value={data.receiptHeader}
           onChange={(e) => onChange({ receiptHeader: e.target.value })}
@@ -160,7 +158,7 @@ function StepReceipt({ data, onChange, onNext, onBack }) {
       </Field>
       <Field label="Receipt footer">
         <input
-          className="input input-md w-full"
+          className="input-field input-md w-full"
           placeholder="Thank you for your purchase!"
           value={data.receiptFooter}
           onChange={(e) => onChange({ receiptFooter: e.target.value })}
@@ -192,10 +190,10 @@ function StepReceipt({ data, onChange, onNext, onBack }) {
         />
       </Field>
       <div className="flex gap-2">
-        <button className="btn btn-ghost" onClick={onBack}>
+        <button className="btn-ghost" onClick={onBack}>
           <ChevronLeft className="h-4 w-4" /> Back
         </button>
-        <button className="btn btn-primary flex-1" onClick={onNext}>
+        <button className="btn-cta flex-1" onClick={onNext}>
           Next <ChevronRight className="h-4 w-4" />
         </button>
       </div>
@@ -212,7 +210,7 @@ function StepLocation({ data, onChange, onNext, onBack }) {
       </div>
       <Field label="Location name">
         <input
-          className="input input-md w-full"
+          className="input-field input-md w-full"
           placeholder="Main store"
           value={data.locationName}
           onChange={(e) => onChange({ locationName: e.target.value })}
@@ -220,17 +218,17 @@ function StepLocation({ data, onChange, onNext, onBack }) {
       </Field>
       <Field label="Address (optional)">
         <input
-          className="input input-md w-full"
+          className="input-field input-md w-full"
           placeholder="123 Main St, Manila"
           value={data.locationAddress}
           onChange={(e) => onChange({ locationAddress: e.target.value })}
         />
       </Field>
       <div className="flex gap-2">
-        <button className="btn btn-ghost" onClick={onBack}>
+        <button className="btn-ghost" onClick={onBack}>
           <ChevronLeft className="h-4 w-4" /> Back
         </button>
-        <button className="btn btn-primary flex-1" onClick={onNext}>
+        <button className="btn-cta flex-1" onClick={onNext}>
           Next <ChevronRight className="h-4 w-4" />
         </button>
       </div>
@@ -241,8 +239,8 @@ function StepLocation({ data, onChange, onNext, onBack }) {
 function StepDone({ onGoToDashboard }) {
   return (
     <div className="space-y-6 text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
-        <Check className="h-8 w-8 text-success" />
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent-dim">
+        <Check className="h-8 w-8 text-accent" />
       </div>
       <div>
         <h2 className="text-xl font-bold">You're all set!</h2>
@@ -250,7 +248,7 @@ function StepDone({ onGoToDashboard }) {
           Your store is configured and ready to go.
         </p>
       </div>
-      <div className="rounded-xl bg-base-200 p-4 text-left text-sm">
+      <div className="rounded-xl bg-panel p-4 text-left text-sm">
         <p className="mb-2 font-medium">Next steps:</p>
         <ul className="space-y-1 opacity-70">
           <li>• Add your first products</li>
@@ -258,7 +256,7 @@ function StepDone({ onGoToDashboard }) {
           <li>• Start making sales</li>
         </ul>
       </div>
-      <button className="btn btn-primary btn-block" onClick={onGoToDashboard}>
+      <button className="btn-cta btn-block" onClick={onGoToDashboard}>
         Go to Dashboard
       </button>
     </div>
@@ -363,10 +361,15 @@ export default function SetupWizard() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-base-200 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-panel p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="text-center">
+        <div className="receipt-head text-center">
+          <div className="receipt-meta justify-center">
+            <span className="font-bold">{tenant?.name}</span>
+            <span className="dot" aria-hidden="true"></span>
+            <span>{new Date().toLocaleDateString()}</span>
+          </div>
           <h1 className="text-2xl font-bold">Set up your store</h1>
           <p className="mt-1 text-sm opacity-60">
             Step {step + 1} of {STEPS.length}
@@ -382,7 +385,7 @@ export default function SetupWizard() {
             <div
               key={s.id}
               className={`flex items-center gap-1.5 text-xs ${
-                i === step ? 'text-primary font-medium' : i < step ? 'text-success' : 'opacity-40'
+                i === step ? 'text-accent font-medium' : i < step ? 'text-accent' : 'opacity-40'
               }`}
             >
               {i < step ? (
@@ -396,7 +399,7 @@ export default function SetupWizard() {
         </div>
 
         {/* Step content */}
-        <div className="rounded-2xl bg-base-100 p-6 shadow-lg">
+        <div className="rounded-lg bg-paper p-6">
           {step === 0 && <StepBusiness data={data} onChange={update} onNext={handleNext} />}
           {step === 1 && <StepFinancial data={data} onChange={update} onNext={handleNext} onBack={handleBack} />}
           {step === 2 && <StepReceipt data={data} onChange={update} onNext={handleNext} onBack={handleBack} />}
@@ -405,7 +408,7 @@ export default function SetupWizard() {
 
           {step < 4 && busy && (
             <div className="mt-4 flex items-center justify-center gap-2 text-sm opacity-60">
-              <Loader className="h-4 w-4 animate-spin" /> Saving...
+              <Loader className="h-4 w-4 spin" /> Saving...
             </div>
           )}
         </div>
@@ -413,7 +416,7 @@ export default function SetupWizard() {
         {/* Skip */}
         {step < 4 && (
           <button
-            className="btn btn-ghost btn-sm btn-block opacity-50"
+            className="btn-ghost btn-sm btn-block opacity-50"
             onClick={() => setStep(4)}
           >
             Skip for now

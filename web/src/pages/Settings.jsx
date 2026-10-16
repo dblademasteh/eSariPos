@@ -6,10 +6,10 @@ import { Field, useToast } from '../components/ui.jsx';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'AED', 'INR', 'BRL', 'MXN', 'ZAR', 'SGD', 'PHP'];
 const ROUNDING_MODES = [
-  { value: 'none', label: 'No cash rounding' },
-  { value: 'step5', label: 'Nearest 0.05' },
-  { value: 'step10', label: 'Nearest 0.10' },
-  { value: 'step100', label: 'Nearest whole unit' },
+  { value: 'none', label: 'No rounding' },
+  { value: 'step5', label: 'Nearest ₱0.05' },
+  { value: 'step10', label: 'Nearest ₱0.10' },
+  { value: 'step100', label: 'Nearest ₱1' },
 ];
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
@@ -30,14 +30,14 @@ const TIMEZONES = [
 ];
 
 const TABS = [
-  { id: 'business', label: 'Business', icon: Building2 },
-  { id: 'financial', label: 'Financial', icon: Banknote },
-  { id: 'receipt', label: 'Receipt', icon: Receipt },
-  { id: 'register', label: 'Register', icon: Wallet },
-  { id: 'loyalty', label: 'Loyalty', icon: Star },
-  { id: 'inventory', label: 'Inventory', icon: Package },
-  { id: 'security', label: 'Security', icon: Lock },
-  { id: 'integrations', label: 'Integrations', icon: Plug },
+  { id: 'business', label: 'Store' },
+  { id: 'financial', label: 'Money' },
+  { id: 'receipt', label: 'Receipt' },
+  { id: 'register', label: 'Register' },
+  { id: 'loyalty', label: 'Loyalty' },
+  { id: 'inventory', label: 'Stock' },
+  { id: 'security', label: 'Security' },
+  { id: 'integrations', label: 'Integrations' },
 ];
 
 function TwoFactorCard() {
@@ -68,7 +68,7 @@ function TwoFactorCard() {
           : 'Add a second step to owner sign-ins using any TOTP app (Google Authenticator, Aegis, …).'}
       </p>
       {!enabled && !setup && (
-        <button className={`btn btn-primary btn-sm ${busy ? 'loading' : ''}`} disabled={busy} onClick={async () => {
+        <button className={`btn-cta btn-sm ${busy ? 'opacity-50 pointer-events-none' : ''}`} disabled={busy} onClick={async () => {
           setBusy(true);
           try { setSetup(await api('/auth/2fa/setup', { method: 'POST', body: {} })); }
           catch (err) { toast.error(err.message); } finally { setBusy(false); }
@@ -76,19 +76,19 @@ function TwoFactorCard() {
       )}
       {setup && (
         <div className="space-y-3">
-          <div className="rounded-xl bg-base-200 p-3 text-sm">
+          <div className="bg-panel rounded-lg p-3 text-sm">
             <ol className="list-decimal space-y-1 pl-5">
               <li>Add a new account in your authenticator app.</li>
               <li>Choose "Enter a setup key" and paste this secret:</li>
             </ol>
-            <code className="mt-2 block break-all rounded bg-base-100 p-2 font-mono text-base">{setup.secret}</code>
+            <code className="mt-2 block break-all rounded bg-paper p-2 font-data text-base">{setup.secret}</code>
             <p className="mt-2 text-xs opacity-60">Or paste this URI into your app:</p>
-            <code className="block break-all rounded bg-base-100 p-2 text-xs">{setup.otpauthUri}</code>
+            <code className="block break-all rounded bg-paper p-2 text-xs">{setup.otpauthUri}</code>
           </div>
           <Field label="Enter the current 6-digit code">
-            <input className="input input-md w-full text-center font-mono tracking-[0.4em]" maxLength={6} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
+            <input className="input-field input-md w-full text-center font-data tracking-[0.4em]" maxLength={6} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
           </Field>
-          <button className={`btn btn-primary btn-sm ${busy ? 'loading' : ''}`} disabled={code.length !== 6 || busy} onClick={async () => {
+          <button className={`btn-cta btn-sm ${busy ? 'opacity-50 pointer-events-none' : ''}`} disabled={code.length !== 6 || busy} onClick={async () => {
             setBusy(true);
             try { await api('/auth/2fa/enable', { method: 'POST', body: { code } }); toast.success('Two-factor enabled'); setSetup(null); setEnabled(true); }
             catch (err) { toast.error(err.message); } finally { setBusy(false); }
@@ -106,8 +106,8 @@ function DisableTwoFactor({ onDisabled }) {
   const [busy, setBusy] = useState(false);
   return (
     <div className="flex items-end gap-2">
-      <input className="input input-sm w-32 text-center font-mono" placeholder="Code" maxLength={6} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
-      <button className={`btn btn-outline btn-error btn-sm ${busy ? 'loading' : ''}`} disabled={code.length !== 6 || busy} onClick={async () => {
+      <input className="input-field input-sm w-32 text-center font-data" placeholder="Code" maxLength={6} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
+      <button className={`btn-outline btn-warn btn-sm ${busy ? 'opacity-50 pointer-events-none' : ''}`} disabled={code.length !== 6 || busy} onClick={async () => {
         setBusy(true);
         try { await api('/auth/2fa/disable', { method: 'POST', body: { code } }); toast.success('Two-factor disabled'); onDisabled(); }
         catch (err) { toast.error(err.message); } finally { setBusy(false); }
@@ -131,15 +131,15 @@ function DigestCard() {
     <div className="space-y-3">
       <p className="text-sm opacity-60">
         A summary of yesterday (orders, revenue, top seller, low stock) is built daily at 06:00 server time and sent
-        to owners. Delivery activates once <code className="font-mono text-xs">SMTP_URL</code> +{' '}
-        <code className="font-mono text-xs">MAIL_FROM</code> are configured — until then it runs in dry-run mode.
+        to owners. Delivery activates once <code className="font-data text-xs">SMTP_URL</code> +{' '}
+        <code className="font-data text-xs">MAIL_FROM</code> are configured — until then it runs in dry-run mode.
       </p>
       {!summary ? (
-        <button className={`btn btn-sm btn-outline ${busy ? 'loading' : ''}`} disabled={busy} onClick={preview}>
+        <button className={`btn-outline btn-sm ${busy ? 'opacity-50 pointer-events-none' : ''}`} disabled={busy} onClick={preview}>
           Preview yesterday's digest
         </button>
       ) : (
-        <div className="rounded-xl bg-base-200 p-3 font-mono text-sm">
+        <div className="bg-panel rounded-lg p-3 font-data text-sm">
           <div>Orders: {summary.ordersCount}</div>
           <div>Net revenue: {summary.revenue.toFixed(2)}</div>
           <div>Top seller: {summary.topProduct ?? '—'}</div>
@@ -170,24 +170,24 @@ function PlatformCard() {
   useEffect(() => { load(); }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
         <h3 className="mb-2 font-semibold">API keys</h3>
-        <p className="mb-3 text-sm opacity-60">Read-only reporting access via the <code className="font-mono text-xs">X-Api-Key</code> header.</p>
+        <p className="mb-3 text-sm opacity-60">Read-only reporting access via the <code className="font-data text-xs">X-Api-Key</code> header.</p>
         {newKey && (
-          <div className="mb-3 rounded-xl bg-success/10 p-3 text-sm">
+          <div className="mb-3 bg-accent-dim rounded-lg p-3 text-sm">
             Copy this key now — it is shown once:
-            <code className="mt-1 block break-all font-mono">{newKey}</code>
+            <code className="mt-1 block break-all font-data">{newKey}</code>
           </div>
         )}
         <ul className="mb-3 space-y-1 text-sm">
           {(keys ?? []).map((k) => (
-            <li key={k.id} className="flex items-center justify-between gap-2 rounded-lg bg-base-200 px-2 py-1">
+            <li key={k.id} className="flex items-center justify-between gap-2 rounded-lg bg-panel px-2 py-1">
               <span className={k.revoked ? 'line-through opacity-50' : ''}>
-                {k.label} · <span className="font-mono text-xs">{k.key_prefix}…</span>
+                {k.label} · <span className="font-data text-xs">{k.key_prefix}…</span>
               </span>
               {!k.revoked && (
-                <button className="btn btn-ghost btn-xs text-error" onClick={async () => {
+                <button className="btn-ghost btn-xs text-warn" onClick={async () => {
                   try { await api(`/api-keys/${k.id}`, { method: 'PATCH', body: { revoked: true } }); load(); }
                   catch (e) { toast.error(e.message); }
                 }}>revoke</button>
@@ -196,8 +196,8 @@ function PlatformCard() {
           ))}
         </ul>
         <div className="flex items-end gap-2">
-          <input className="input input-sm flex-1" placeholder="Key label" value={label} onChange={(e) => setLabel(e.target.value)} />
-          <button className={`btn btn-primary btn-sm ${busy ? 'loading' : ''}`} disabled={!label.trim() || busy} onClick={async () => {
+          <input className="input-field input-sm flex-1" placeholder="Key label" value={label} onChange={(e) => setLabel(e.target.value)} />
+          <button className={`btn-cta btn-sm ${busy ? 'opacity-50 pointer-events-none' : ''}`} disabled={!label.trim() || busy} onClick={async () => {
             setBusy(true);
             try { const created = await api('/api-keys', { method: 'POST', body: { label } }); setNewKey(created.key); setLabel(''); await load(); }
             catch (err) { toast.error(err.message); } finally { setBusy(false); }
@@ -205,24 +205,24 @@ function PlatformCard() {
         </div>
       </div>
 
-      <div className="divider" />
+      <div className="receipt-line" />
 
       <div>
         <h3 className="mb-2 font-semibold">Webhooks</h3>
-        <p className="mb-3 text-sm opacity-60">Signed with HMAC-SHA256 (<code className="font-mono text-xs">X-eSariPOS-Signature</code>).</p>
+        <p className="mb-3 text-sm opacity-60">Signed with HMAC-SHA256 (<code className="font-data text-xs">X-eSariPOS-Signature</code>).</p>
         {newHookSecret && (
-          <div className="mb-3 rounded-xl bg-success/10 p-3 text-sm">
+          <div className="mb-3 bg-accent-dim rounded-lg p-3 text-sm">
             Signing secret (shown once):
-            <code className="mt-1 block break-all font-mono">{newHookSecret}</code>
+            <code className="mt-1 block break-all font-data">{newHookSecret}</code>
           </div>
         )}
         <ul className="mb-3 space-y-1 text-sm">
           {(hooks ?? []).map((w) => (
-            <li key={w.id} className="flex items-center justify-between gap-2 rounded-lg bg-base-200 px-2 py-1">
+            <li key={w.id} className="flex items-center justify-between gap-2 rounded-lg bg-panel px-2 py-1">
               <span className="min-w-0 truncate">{w.url}</span>
               <span className="whitespace-nowrap text-xs opacity-60">{w.deliveries} sent · {w.failures} failed</span>
               {w.isActive && (
-                <button className="btn btn-ghost btn-xs text-error" onClick={async () => {
+                <button className="btn-ghost btn-xs text-warn" onClick={async () => {
                   try { await api(`/webhooks/${w.id}`, { method: 'PATCH', body: { isActive: false } }); load(); }
                   catch (e) { toast.error(e.message); }
                 }}>off</button>
@@ -231,8 +231,8 @@ function PlatformCard() {
           ))}
         </ul>
         <div className="flex items-end gap-2">
-          <input className="input input-sm flex-1" placeholder="https://your-app.example/hook" value={hookUrl} onChange={(e) => setHookUrl(e.target.value)} />
-          <button className={`btn btn-primary btn-sm ${busy ? 'loading' : ''}`} disabled={!hookUrl.startsWith('http') || busy} onClick={async () => {
+          <input className="input-field input-sm flex-1" placeholder="https://your-app.example/hook" value={hookUrl} onChange={(e) => setHookUrl(e.target.value)} />
+          <button className={`btn-cta btn-sm ${busy ? 'opacity-50 pointer-events-none' : ''}`} disabled={!hookUrl.startsWith('http') || busy} onClick={async () => {
             setBusy(true);
             try { const created = await api('/webhooks', { method: 'POST', body: { url: hookUrl, events: ['order.created'] } }); setNewHookSecret(created.secret); setHookUrl(''); await load(); }
             catch (err) { toast.error(err.message); } finally { setBusy(false); }
@@ -349,20 +349,25 @@ export default function Settings() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-4">
-        <h1 className="text-xl font-bold">Settings</h1>
-        <p className="text-sm opacity-60">Business ID <span className="font-mono">{tenant?.slug}</span></p>
+      <div className="receipt-head">
+        <div className="receipt-meta">
+          <span className="font-bold">{tenant?.name}</span>
+          <span className="dot" aria-hidden="true"></span>
+          <span>{new Date().toLocaleDateString()}</span>
+        </div>
+        <h1 className="text-display">Settings</h1>
+        <p className="text-sm opacity-60">Business ID <span className="font-data">{tenant?.slug}</span></p>
       </div>
 
       {/* Tab bar */}
-      <div className="tabs tabs-boxed mb-6 bg-base-200 p-1">
+      <div className="flex gap-1 mb-8 p-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
-            className={`tab gap-1 ${activeTab === tab.id ? 'tab-active' : ''}`}
+            className={`flex-1 btn-ghost ${activeTab === tab.id ? 'bg-accent text-white' : ''}`}
             onClick={() => setActiveTab(tab.id)}
           >
-            <tab.icon className="hidden sm:inline h-4 w-4" /> {tab.label}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -370,38 +375,39 @@ export default function Settings() {
       <form onSubmit={save}>
         {/* ── Business ── */}
         {activeTab === 'business' && (
-          <div className="card bg-base-100 p-6 shadow">
-            <div className="space-y-4">
+          <div className="card-counter">
+            <div className="space-y-5">
+              <span className="eyebrow">Store details</span>
               <Field label="Business name">
-                <input className="input input-md w-full" value={form.name} onChange={set('name')} required />
+                <input className="input-field input-md w-full" value={form.name} onChange={set('name')} required />
               </Field>
               <Field label="Address">
-                <input className="input input-md w-full" value={form.address} onChange={set('address')} />
+                <input className="input-field input-md w-full" value={form.address} onChange={set('address')} />
               </Field>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Phone">
-                  <input className="input input-md w-full" value={form.phone} onChange={set('phone')} />
+                  <input className="input-field input-md w-full" value={form.phone} onChange={set('phone')} />
                 </Field>
                 <Field label="Logo URL" hint="Shown on receipts and login page">
-                  <input className="input input-md w-full" placeholder="https://…" value={form.logoUrl} onChange={set('logoUrl')} />
+                  <input className="input-field input-md w-full" placeholder="https://…" value={form.logoUrl} onChange={set('logoUrl')} />
                 </Field>
               </div>
               <Field label="Business timezone" hint="Used for digest emails and report defaults">
-                <select className="select select-md w-full" value={form.timezone} onChange={set('timezone')}>
+                <select className="select-field input-md w-full" value={form.timezone} onChange={set('timezone')}>
                   {TIMEZONES.map((tz) => <option key={tz}>{tz}</option>)}
                 </select>
               </Field>
 
-              <div className="divider text-xs opacity-50">BIR Compliance (Philippines)</div>
+              <span className="eyebrow">BIR Compliance (Philippines)</span>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Field label="TIN (Tax Identification Number)" hint="Required on Official Receipts">
-                  <input className="input input-md w-full" placeholder="000-000-000-000" value={form.tin} onChange={set('tin')} />
+                  <input className="input-field input-md w-full" placeholder="000-000-000-000" value={form.tin} onChange={set('tin')} />
                 </Field>
                 <Field label="BIR Accreditation No." hint="POS system BIR permit number">
-                  <input className="input input-md w-full" placeholder="BIR-0000-00000000" value={form.birAccreditationNo} onChange={set('birAccreditationNo')} />
+                  <input className="input-field input-md w-full" placeholder="BIR-0000-00000000" value={form.birAccreditationNo} onChange={set('birAccreditationNo')} />
                 </Field>
                 <Field label="Machine / Printer Serial No." hint="POS machine serial number">
-                  <input className="input input-md w-full" placeholder="SN-000000" value={form.machineSerialNo} onChange={set('machineSerialNo')} />
+                  <input className="input-field input-md w-full" placeholder="SN-000000" value={form.machineSerialNo} onChange={set('machineSerialNo')} />
                 </Field>
               </div>
             </div>
@@ -410,31 +416,32 @@ export default function Settings() {
 
         {/* ── Financial ── */}
         {activeTab === 'financial' && (
-          <div className="card bg-base-100 p-6 shadow">
-            <div className="space-y-4">
+          <div className="card-counter">
+            <div className="space-y-5">
+              <span className="eyebrow">Money settings</span>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Field label="Currency">
-                  <select className="select select-md w-full" value={form.currency} onChange={set('currency')}>
+                  <select className="select-field input-md w-full" value={form.currency} onChange={set('currency')}>
                     {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
                   </select>
                 </Field>
                 <Field label="Tax rate (%)">
-                  <input type="number" step="0.01" min="0" max="99.99" className="input input-md w-full" value={form.taxRate} onChange={set('taxRate')} />
+                  <input type="number" step="0.01" min="0" max="99.99" className="input-field input-md w-full" value={form.taxRate} onChange={set('taxRate')} />
                 </Field>
                 <Field label="Service charge (%)" hint="Added after tax on every sale">
-                  <input type="number" step="0.01" min="0" max="99.99" className="input input-md w-full" value={form.surchargePct} onChange={set('surchargePct')} />
+                  <input type="number" step="0.01" min="0" max="99.99" className="input-field input-md w-full" value={form.surchargePct} onChange={set('surchargePct')} />
                 </Field>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="flex items-center gap-3 rounded-xl bg-base-200 p-3">
-                  <input type="checkbox" className="checkbox checkbox-primary" checked={form.taxInclusive} onChange={setChecked('taxInclusive')} />
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" className="checkbox-field" checked={form.taxInclusive} onChange={setChecked('taxInclusive')} />
                   <div>
                     <div className="text-sm font-medium">Tax-inclusive pricing</div>
                     <div className="text-xs opacity-60">Displayed prices already include tax</div>
                   </div>
                 </label>
                 <Field label="Cash rounding" hint="Applied when a sale includes cash">
-                  <select className="select select-md w-full" value={form.cashRounding} onChange={set('cashRounding')}>
+                  <select className="select-field input-md w-full" value={form.cashRounding} onChange={set('cashRounding')}>
                     {ROUNDING_MODES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </Field>
@@ -445,16 +452,17 @@ export default function Settings() {
 
         {/* ── Receipt ── */}
         {activeTab === 'receipt' && (
-          <div className="card bg-base-100 p-6 shadow">
-            <div className="space-y-4">
+          <div className="card-counter">
+            <div className="space-y-5">
+              <span className="eyebrow">Receipt text</span>
               <Field label="Header text" hint="Shown above business name on receipts">
-                <textarea className="textarea textarea-md w-full" rows={2} placeholder="Welcome to our store!" value={form.receiptHeader} onChange={set('receiptHeader')} />
+                <textarea className="input-field w-full" rows={2} placeholder="Welcome to our store!" value={form.receiptHeader} onChange={set('receiptHeader')} />
               </Field>
               <Field label="Footer text" hint="Shown at the bottom of receipts">
-                <textarea className="textarea textarea-md w-full" rows={2} placeholder="Thanks for shopping with us!" value={form.receiptFooter} onChange={set('receiptFooter')} />
+                <textarea className="input-field w-full" rows={2} placeholder="Thanks for shopping with us!" value={form.receiptFooter} onChange={set('receiptFooter')} />
               </Field>
               <Field label="Paper width">
-                <select className="select select-md w-full" value={form.receiptWidth} onChange={(e) => setForm((f) => ({ ...f, receiptWidth: Number(e.target.value) }))}>
+                <select className="select-field input-md w-full" value={form.receiptWidth} onChange={(e) => setForm((f) => ({ ...f, receiptWidth: Number(e.target.value) }))}>
                   <option value={40}>40 columns (standard)</option>
                   <option value={80}>80 columns (wide)</option>
                 </select>
@@ -465,27 +473,28 @@ export default function Settings() {
 
         {/* ── Register ── */}
         {activeTab === 'register' && (
-          <div className="card bg-base-100 p-6 shadow">
-            <div className="space-y-4">
+          <div className="card-counter">
+            <div className="space-y-5">
+              <span className="eyebrow">Register defaults</span>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Default opening float" hint="Starting cash when opening a drawer">
-                  <input type="number" step="0.01" min="0" className="input input-md w-full" value={form.defaultOpeningFloat} onChange={set('defaultOpeningFloat')} />
+                  <input type="number" step="0.01" min="0" className="input-field input-md w-full" value={form.defaultOpeningFloat} onChange={set('defaultOpeningFloat')} />
                 </Field>
                 <Field label="Auto-close drawer (hours)" hint="0 = disabled">
-                  <input type="number" min="0" max="24" className="input input-md w-full" value={form.autoCloseDrawerHours} onChange={set('autoCloseDrawerHours')} />
+                  <input type="number" min="0" max="24" className="input-field input-md w-full" value={form.autoCloseDrawerHours} onChange={set('autoCloseDrawerHours')} />
                 </Field>
               </div>
               <Field label="Default payment method" hint="Pre-selected in the checkout dialog">
-                <select className="select select-md w-full sm:w-80" value={form.defaultPaymentMethod} onChange={set('defaultPaymentMethod')}>
+                <select className="select-field input-md w-full sm:w-80" value={form.defaultPaymentMethod} onChange={set('defaultPaymentMethod')}>
                   {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
               </Field>
 
-              <div className="divider text-xs opacity-50">Checkout behavior</div>
-              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+              <span className="eyebrow">Checkout behavior</span>
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary mt-0.5"
+                  className="checkbox-field mt-0.5"
                   checked={form.autoPrintReceipt}
                   onChange={setChecked('autoPrintReceipt')}
                 />
@@ -494,10 +503,10 @@ export default function Settings() {
                   <div className="text-xs opacity-60">Open the print dialog automatically on checkout completion. Turn off for faster back-to-back selling — receipts stay available in Orders.</div>
                 </div>
               </label>
-              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary mt-0.5"
+                  className="checkbox-field mt-0.5"
                   checked={form.openDrawerOnCash}
                   onChange={setChecked('openDrawerOnCash')}
                 />
@@ -506,10 +515,10 @@ export default function Settings() {
                   <div className="text-xs opacity-60">Send a drawer-open pulse whenever a sale includes cash.</div>
                 </div>
               </label>
-              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary mt-0.5"
+                  className="checkbox-field mt-0.5"
                   checked={form.requireCustomer}
                   onChange={setChecked('requireCustomer')}
                 />
@@ -518,10 +527,10 @@ export default function Settings() {
                   <div className="text-xs opacity-60">Block completing a sale until a customer is selected. Recommended if you rely on loyalty points.</div>
                 </div>
               </label>
-              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary mt-0.5"
+                  className="checkbox-field mt-0.5"
                   checked={form.allowNegativeStock}
                   onChange={setChecked('allowNegativeStock')}
                 />
@@ -531,16 +540,16 @@ export default function Settings() {
                 </div>
               </label>
 
-              <div className="divider text-xs opacity-50">Discounts & tips</div>
+              <span className="eyebrow">Discounts & tips</span>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Max discount (%)" hint="Percentage discounts above this are clamped unless the user is rank 3+">
-                  <input type="number" min="0" max="100" step="1" className="input input-md w-full" value={form.maxDiscountPct} onChange={set('maxDiscountPct')} />
+                  <input type="number" min="0" max="100" step="1" className="input-field input-md w-full" value={form.maxDiscountPct} onChange={set('maxDiscountPct')} />
                 </Field>
               </div>
-              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary mt-0.5"
+                  className="checkbox-field mt-0.5"
                   checked={form.tipsEnabled}
                   onChange={setChecked('tipsEnabled')}
                 />
@@ -551,7 +560,7 @@ export default function Settings() {
               </label>
               {form.tipsEnabled && (
                 <Field label="Tip suggestions (%)" hint="Comma-separated percentages">
-                  <input className="input input-md w-full sm:w-64" value={form.tipSuggestions} onChange={set('tipSuggestions')} placeholder="10,15,20" />
+                  <input className="input-field input-md w-full sm:w-64" value={form.tipSuggestions} onChange={set('tipSuggestions')} placeholder="10,15,20" />
                 </Field>
               )}
             </div>
@@ -560,24 +569,25 @@ export default function Settings() {
 
         {/* ── Loyalty ── */}
         {activeTab === 'loyalty' && (
-          <div className="card bg-base-100 p-6 shadow">
-            <div className="space-y-4">
+          <div className="card-counter">
+            <div className="space-y-5">
+              <span className="eyebrow">Loyalty points</span>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Earn rate" hint="Points per whole currency unit spent">
-                  <input type="number" min="0" max="1000" className="input input-md w-full" value={form.loyaltyEarnPerUnit} onChange={set('loyaltyEarnPerUnit')} />
+                  <input type="number" min="0" max="1000" className="input-field input-md w-full" value={form.loyaltyEarnPerUnit} onChange={set('loyaltyEarnPerUnit')} />
                 </Field>
                 <Field label="Point value (cents)" hint="Value of one point when redeeming">
-                  <input type="number" min="1" max="10000" className="input input-md w-full" value={form.loyaltyPointCents} onChange={set('loyaltyPointCents')} />
+                  <input type="number" min="1" max="10000" className="input-field input-md w-full" value={form.loyaltyPointCents} onChange={set('loyaltyPointCents')} />
                 </Field>
                 <Field label="Minimum points to redeem" hint="Customers need this many points before redemption is allowed">
-                  <input type="number" min="0" max="100000" className="input input-md w-full" value={form.loyaltyMinRedeem} onChange={set('loyaltyMinRedeem')} />
+                  <input type="number" min="0" max="100000" className="input-field input-md w-full" value={form.loyaltyMinRedeem} onChange={set('loyaltyMinRedeem')} />
                 </Field>
                 <Field label="Max redemption (% of order)" hint="Cap on how much of an order can be paid with points (100 = full payment)">
-                  <input type="number" min="0" max="100" step="1" className="input input-md w-full" value={form.loyaltyMaxRedemptionPct} onChange={set('loyaltyMaxRedemptionPct')} />
+                  <input type="number" min="0" max="100" step="1" className="input-field input-md w-full" value={form.loyaltyMaxRedemptionPct} onChange={set('loyaltyMaxRedemptionPct')} />
                 </Field>
               </div>
               <Field label="Points expiry (days)" hint="0 = never expire. Points older than this are voided at redemption time.">
-                <input type="number" min="0" max="3650" className="input input-md w-full sm:w-64" value={form.loyaltyExpiryDays} onChange={set('loyaltyExpiryDays')} />
+                <input type="number" min="0" max="3650" className="input-field input-md w-full sm:w-64" value={form.loyaltyExpiryDays} onChange={set('loyaltyExpiryDays')} />
               </Field>
             </div>
           </div>
@@ -585,16 +595,17 @@ export default function Settings() {
 
         {/* ── Inventory ── */}
         {activeTab === 'inventory' && (
-          <div className="card bg-base-100 p-6 shadow">
-            <div className="space-y-4">
+          <div className="card-counter">
+            <div className="space-y-5">
+              <span className="eyebrow">Inventory</span>
               <Field label="Low-stock alert threshold" hint="Global default — products below this trigger an alert">
-                <input type="number" min="0" max="10000" className="input input-md w-full sm:w-64" value={form.lowStockAlertThreshold} onChange={set('lowStockAlertThreshold')} />
+                <input type="number" min="0" max="10000" className="input-field input-md w-full sm:w-64" value={form.lowStockAlertThreshold} onChange={set('lowStockAlertThreshold')} />
               </Field>
-              <div className="divider text-xs opacity-50">Stock tracking</div>
-              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+              <span className="eyebrow">Stock tracking</span>
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary mt-0.5"
+                  className="checkbox-field mt-0.5"
                   checked={form.inventoryStockMode === 'track'}
                   onChange={(e) => setForm((f) => ({ ...f, inventoryStockMode: e.target.checked ? 'track' : 'none' }))}
                 />
@@ -603,10 +614,10 @@ export default function Settings() {
                   <div className="text-xs opacity-60">When off, sales never decrement stock and inventory views act as reference lists only.</div>
                 </div>
               </label>
-              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary mt-0.5"
+                  className="checkbox-field mt-0.5"
                   checked={form.inventoryRequireAdjustmentNote}
                   onChange={setChecked('inventoryRequireAdjustmentNote')}
                 />
@@ -615,10 +626,10 @@ export default function Settings() {
                   <div className="text-xs opacity-60">Staff must state a reason when manually changing stock counts.</div>
                 </div>
               </label>
-              <label className="flex items-start gap-3 rounded-xl bg-base-200 p-3">
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary mt-0.5"
+                  className="checkbox-field mt-0.5"
                   checked={form.inventoryAutoReorder}
                   onChange={setChecked('inventoryAutoReorder')}
                 />
@@ -633,21 +644,22 @@ export default function Settings() {
 
         {/* ── Security ── */}
         {activeTab === 'security' && (
-          <div className="space-y-4">
+          <div className="space-y-5">
+            <span className="eyebrow">Account security</span>
             {isOwner && (
-              <div className="card bg-base-100 p-6 shadow">
-                <h2 className="mb-4 font-bold">Two-factor authentication</h2>
+              <div className="card-counter">
+                <h2 className="text-display">Two-factor authentication</h2>
                 <TwoFactorCard />
               </div>
             )}
             {isOwner && (
-              <div className="card bg-base-100 p-6 shadow">
-                <h2 className="mb-4 font-bold">Daily email digest</h2>
+              <div className="card-counter">
+                <h2 className="text-display">Daily email digest</h2>
                 <DigestCard />
               </div>
             )}
             {!isOwner && (
-              <div className="card bg-base-100 p-6 shadow text-sm opacity-60">
+              <div className="card-counter text-sm opacity-60">
                 Security settings are only available to the business owner.
               </div>
             )}
@@ -656,17 +668,20 @@ export default function Settings() {
 
         {/* ── Integrations ── */}
         {activeTab === 'integrations' && (
-          <div className="card bg-base-100 p-6 shadow">
-            {isOwner ? <PlatformCard /> : (
-              <p className="text-sm opacity-60">Integrations are only available to the business owner.</p>
-            )}
+          <div className="space-y-5">
+            <span className="eyebrow">Connections</span>
+            <div className="card-counter">
+              {isOwner ? <PlatformCard /> : (
+                <p className="text-sm opacity-60">Integrations are only available to the business owner.</p>
+              )}
+            </div>
           </div>
         )}
 
         {/* Save button (visible on all tabs) */}
-        <div className="mt-4 flex justify-end">
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={busy}>
-            Save settings
+        <div className="mt-6 flex justify-end">
+          <button className={`btn-cta ${busy ? 'opacity-50 pointer-events-none' : ''}`} disabled={busy}>
+            Save
           </button>
         </div>
       </form>

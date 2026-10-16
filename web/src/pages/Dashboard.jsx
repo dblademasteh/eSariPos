@@ -5,7 +5,7 @@ import { makeMoney, fmtWeekdayShort, tz } from '../lib/format.js';
 import { downloadCsv } from '../lib/export.js';
 import { useAuth } from '../state/AuthContext.jsx';
 import { Spinner, useToast } from '../components/ui.jsx';
-import { PartyPopper, TrendingUp, TrendingDown, Download } from 'lucide-react';
+import { TrendingUp, TrendingDown, Download } from 'lucide-react';
 
 const RANGES = [
   { key: 'today', label: 'Today', days: 1 },
@@ -69,16 +69,19 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <div>
-          <h1 className="text-xl font-bold">Dashboard</h1>
-          <p className="text-sm opacity-60">Sales at a glance · compared with the previous period</p>
+      <div className="receipt-head">
+        <div className="receipt-meta">
+          <span className="font-bold">{tenant?.name}</span>
+          <span className="dot" aria-hidden="true"></span>
+          <span>{new Date().toLocaleDateString()}</span>
         </div>
-        <div role="tablist" className="join ml-auto">
+        <h1 className="text-xl font-bold">Dashboard</h1>
+        <p className="text-sm text-mute">Sales at a glance · compared with the previous period</p>
+        <div role="tablist" className="flex gap-1 mt-2">
           {RANGES.map((r) => (
             <button
               key={r.key}
-              className={`btn btn-sm join-item ${rangeKey === r.key ? 'btn-primary' : ''}`}
+              className={`btn-ghost btn-sm ${rangeKey === r.key ? 'bg-accent text-white' : 'bg-panel text-mute hover:bg-panel hover:text-ink'}`}
               onClick={() => setRangeKey(r.key)}
             >
               {r.label}
@@ -100,56 +103,58 @@ export default function Dashboard() {
         <Stat title="Items sold" value={data.summary.itemsSold} compare={delta(data.summary.itemsSold, data.prevSummary.itemsSold)} money={money} />
       </div>
 
-      <div className="card bg-base-100 shadow">
+      <div className="card-counter">
         <div className="card-body">
-          <h2 className="card-title text-base">Tax summary · selected period</h2>
+          <h2 className="text-base font-bold text-ink">Tax summary · selected period</h2>
           {(tax.rates ?? []).map((r) => (
             <div key={r.rate} className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-              <span className="font-medium">Rate {r.rate}%</span>
-              <span>Taxable {money(r.taxableSales)}</span>
-              <span>Discounts -{money(r.discounts)}</span>
-              <span className="font-semibold text-primary">Net tax due {money(r.estimatedNetTax)}</span>
+              <span className="font-medium text-ink">Rate {r.rate}%</span>
+              <span className="text-mute">Taxable {money(r.taxableSales)}</span>
+              <span className="text-mute">Discounts -{money(r.discounts)}</span>
+              <span className="font-semibold text-accent">Net tax due {money(r.estimatedNetTax)}</span>
             </div>
           ))}
-          <p className="text-xs opacity-50">Single registered rate today; grouped by rate so extra jurisdictions slot in later.</p>
+          <p className="text-xs text-mute">Single registered rate today; grouped by rate so extra jurisdictions slot in later.</p>
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
-        <div className="card bg-base-100 shadow lg:col-span-3">
+        <div className="card-counter lg:col-span-3">
           <div className="card-body">
-            <h2 className="card-title text-base">Daily revenue</h2>
+            <h2 className="text-base font-bold text-ink">Daily revenue</h2>
             <div className="mt-2 flex h-48 items-end gap-2 overflow-x-auto">
               {data.daily.slice(-Math.max(range.days, 7)).map((d) => (
                 <div key={d.day} className="flex h-full min-w-[36px] flex-1 flex-col items-center justify-end gap-1">
-                  <span className="text-[10px] opacity-60">{d.revenue > 0 ? money(d.revenue) : ''}</span>
+                  <span className="text-[10px] text-mute">{d.revenue > 0 ? money(d.revenue) : ''}</span>
                   <div
-                    className="w-full rounded-t-lg bg-primary/80 transition-colors hover:bg-primary"
+                    className="w-full rounded-t-lg bg-accent/80 transition-colors hover:bg-accent"
                     style={{ height: `${Math.max((d.revenue / maxRevenue) * 100, d.revenue > 0 ? 3 : 1)}%` }}
                     title={`${d.orders} orders`}
                   ></div>
-                  <span className="text-xs opacity-60">{fmtWeekdayShort(d.day)}</span>
+                  <span className="text-xs text-mute">{fmtWeekdayShort(d.day)}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="card bg-base-100 shadow lg:col-span-2">
+        <div className="card-counter lg:col-span-2">
           <div className="card-body">
-            <h2 className="card-title text-base">Top sellers (30 days)</h2>
+            <h2 className="text-base font-bold text-ink">Top sellers (30 days)</h2>
             <ul className="mt-2 space-y-3">
-              {data.top.length === 0 && <li className="text-sm opacity-60">No sales yet.</li>}
+              {data.top.length === 0 && <li className="text-sm text-mute">No sales yet.</li>}
               {data.top.map((p, i) => (
                 <li key={p.name}>
                   <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
                     <span className="truncate">
-                      <span className="mr-1 font-semibold opacity-40">#{i + 1}</span>
+                      <span className="mr-1 font-semibold text-mute">#{i + 1}</span>
                       {p.name}
                     </span>
-                    <span className="whitespace-nowrap font-medium">{p.qty} sold</span>
+                    <span className="whitespace-nowrap font-medium text-ink">{p.qty} sold</span>
                   </div>
-                  <progress className="progress progress-secondary h-1.5" value={p.qty} max={maxQty}></progress>
+                  <div className="w-full h-1.5 rounded-full bg-line">
+                    <div className="h-1.5 rounded-full bg-accent" style={{ width: `${(p.qty / maxQty) * 100}%` }} />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -157,12 +162,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="card bg-base-100 shadow">
+      <div className="card-counter">
         <div className="card-body">
           <div className="flex items-center justify-between">
-            <h2 className="card-title text-base">Product profitability · net of refunds</h2>
+            <h2 className="text-base font-bold text-ink">Product profitability · net of refunds</h2>
             <button
-              className="btn btn-outline btn-sm"
+              className="btn-outline btn-sm text-ink hover:text-ink border-line"
               onClick={() =>
                 downloadCsv(`profitability-${range.days}d`, [
                   { key: 'name', label: 'Product' },
@@ -178,29 +183,29 @@ export default function Dashboard() {
             </button>
           </div>
           {profit.length === 0 ? (
-            <p className="py-4 text-center text-sm opacity-60">No sales in this period.</p>
+            <p className="py-4 text-center text-sm text-mute">No sales in this period.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="table table-sm mt-2">
+              <table className="table-counter table-sm mt-2">
                 <thead>
                   <tr>
-                    <th>Product</th>
-                    <th className="text-right">Sold</th>
-                    <th className="text-right">Revenue</th>
-                    <th className="text-right">COGS</th>
-                    <th className="text-right">Profit</th>
-                    <th className="text-right">Margin</th>
+                    <th className="text-ink">Product</th>
+                    <th className="text-right text-ink">Sold</th>
+                    <th className="text-right text-ink">Revenue</th>
+                    <th className="text-right text-ink">COGS</th>
+                    <th className="text-right text-ink">Profit</th>
+                    <th className="text-right text-ink">Margin</th>
                   </tr>
                 </thead>
                 <tbody>
                   {profit.slice(0, 8).map((p) => (
                     <tr key={p.productId}>
-                      <td>{p.name}</td>
-                      <td className="text-right font-mono">{p.qty}</td>
-                      <td className="text-right">{money(p.revenue)}</td>
-                      <td className="text-right opacity-70">{money(p.cogs)}</td>
-                      <td className={`text-right font-semibold ${p.profit >= 0 ? '' : 'text-error'}`}>{money(p.profit)}</td>
-                      <td className="text-right font-mono">{p.marginPct}%</td>
+                      <td className="text-ink">{p.name}</td>
+                      <td className="text-right font-data text-ink">{p.qty}</td>
+                      <td className="text-right text-ink">{money(p.revenue)}</td>
+                      <td className="text-right text-mute">{money(p.cogs)}</td>
+                      <td className={`text-right font-semibold text-ink ${p.profit < 0 ? 'text-warn' : ''}`}>{money(p.profit)}</td>
+                      <td className="text-right font-data text-mute">{p.marginPct}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -210,38 +215,36 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="card bg-base-100 shadow">
+      <div className="card-counter">
         <div className="card-body">
           <div className="flex items-center justify-between">
-            <h2 className="card-title text-base">Low stock</h2>
-            <Link to="/products" className="link link-primary link-sm text-sm">
-              Manage products -&gt;
+            <h2 className="text-base font-bold text-ink">Low stock</h2>
+            <Link to="/products" className="text-accent hover:underline text-sm">
+              Manage products &rarr;
             </Link>
           </div>
           {data.lowStock.length === 0 ? (
-            <p className="py-4 text-center text-sm opacity-60">Everything is well stocked <PartyPopper className="inline h-5 w-5 text-primary" /></p>
+            <p className="py-4 text-center text-sm text-mute">All items are in stock.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="table table-sm mt-2">
+              <table className="table-counter table-sm mt-2">
                 <thead>
                   <tr>
-                    <th>Product</th>
-                    <th className="text-right">Stock</th>
-                    <th>Status</th>
+                    <th className="text-ink">Product</th>
+                    <th className="text-right text-ink">Stock</th>
+                    <th className="text-ink">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.lowStock.map((p) => (
                     <tr key={p.id}>
-                      <td>
-                        {p.name}
-                      </td>
-                      <td className="text-right font-mono">{Number(p.stock)}</td>
+                      <td className="text-ink">{p.name}</td>
+                      <td className="text-right font-data text-ink">{Number(p.stock)}</td>
                       <td>
                         {Number(p.stock) === 0 ? (
-                          <span className="badge badge-error badge-sm text-error-content">Out of stock</span>
+                          <span className="badge-pill fill-warn badge-sm">Out of stock</span>
                         ) : (
-                          <span className="badge badge-warning badge-sm text-warning-content">Running low</span>
+                          <span className="badge-pill warn badge-sm">Running low</span>
                         )}
                       </td>
                     </tr>
@@ -259,12 +262,12 @@ export default function Dashboard() {
 function Delta({ compare }) {
   if (!compare) return null;
   const { diff, pct } = compare;
-  if (diff === 0) return <span className="text-xs opacity-50">= previous</span>;
+  if (diff === 0) return <span className="text-xs text-mute">= previous</span>;
   const up = diff > 0;
   return (
-    <span className={`text-xs font-semibold ${up ? 'text-success' : 'text-error'}`}>
-      {up ? <TrendingUp className="inline h-4 w-4 text-success" /> : <TrendingDown className="inline h-4 w-4 text-error" />} {Math.abs(pct ?? 100)}%
-      <span className="ml-1 opacity-60">vs prev</span>
+    <span className={`text-xs font-semibold ${up ? 'text-accent' : 'text-warn'}`}>
+      {up ? <TrendingUp className="inline h-4 w-4 text-accent" /> : <TrendingDown className="inline h-4 w-4 text-warn" />} {Math.abs(pct ?? 100)}%
+      <span className="ml-1 text-mute">vs prev</span>
     </span>
   );
 }
@@ -272,11 +275,11 @@ function Delta({ compare }) {
 function Stat({ title, value, accent, compare, money }) {
   void money;
   return (
-    <div className={`stat rounded-xl shadow ${accent ? 'bg-primary text-primary-content' : 'bg-base-100'}`}>
-      <div className="stat-title text-xs">{title}</div>
-      <div className="stat-value text-2xl md:text-3xl">{value}</div>
+    <div className={`card-counter ${accent ? 'bg-accent text-white' : ''}`}>
+      <div className="text-xs text-mute">{title}</div>
+      <div className={`text-2xl md:text-3xl font-data ${accent ? 'text-white' : 'text-ink'}`}>{value}</div>
       {compare && (
-        <div className={`${accent ? 'text-primary-content/80' : ''}`}>
+        <div className={`${accent ? 'text-white/90' : ''}`}>
           <Delta compare={compare} />
         </div>
       )}

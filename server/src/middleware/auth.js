@@ -44,33 +44,33 @@ function readTokenFromRequest(req) {
   return null;
 }
 
-export function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   // Public API key path (X-Api-Key) - resolved against adminPool because RLS
   // needs the tenant, which only the key itself can provide (chicken-and-egg).
   const apiKey = req.headers['x-api-key'];
   if (typeof apiKey === 'string' && apiKey.startsWith('nvpk_')) {
-    adminPool
-      .query('SELECT id, tenant_id FROM api_keys WHERE key_hash = $1 AND NOT revoked', [
-        hashToken(apiKey),
-      ])
-      .then(({ rows }) => {
-        const key = rows[0];
-        if (!key) return next(new ApiError(401, 'Invalid API key'));
-        req.auth = {
-          apiKey: true,
-          keyId: key.id,
-          tid: key.tenant_id,
-          role: 'api',
-          userId: null,
-          perms: ['reports'],
-        };
-        adminPool
-          .query('UPDATE api_keys SET last_used_at = now() WHERE id = $1', [key.id])
-          .catch(() => {});
-        next();
-      })
-      .catch(() => next(new ApiError(401, 'Invalid API key')));
-    return;
+    try {
+      const { rows } = await adminPool.query(
+        'SELECT id, tenant_id FROM api_keys WHERE key_hash = $1 AND NOT revoked',
+        [hashToken(apiKey)]
+      );
+      const key = rows[0];
+      if (!key) return next(new ApiError(401, 'Invalid API key'));
+      req.auth = {
+        apiKey: true,
+        keyId: key.id,
+        tid: key.tenant_id,
+        role: 'api',
+        userId: null,
+        perms: ['reports'],
+      };
+      await adminPool
+        .query('UPDATE api_keys SET last_used_at = now() WHERE id = $1', [key.id])
+        .catch(() => {});
+      return next();
+    } catch {
+      return next(new ApiError(401, 'Invalid API key'));
+    }
   }
   const token = readTokenFromRequest(req);
   if (!token) return next(new ApiError(401, 'Authentication required'));

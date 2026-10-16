@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { makeMoney, fmtDateTime } from '../lib/format.js';
 import { discardSale, flushQueue, retrySale, startAutoFlush } from '../lib/offlineQueue.js';
 import { setLocationId } from '../lib/registerLocation.js';
@@ -7,7 +7,7 @@ import { useAuth } from '../state/AuthContext.jsx';
 import { useOfflineQueue, useOnline } from '../state/useOfflineQueue.js';
 import PinPad from './PinPad.jsx';
 import { api } from '../api/client.js';
-import { RoleBadge, useToast } from './ui.jsx';
+import { RoleBadge, useToast, Modal } from './ui.jsx';
 import {
   BarChart3, Banknote, Package, Truck, Receipt, Users, Ticket, IdCard,
   ScrollText, Settings, Clock, Menu, Monitor, Moon, ArrowRightLeft, Hash,
@@ -60,64 +60,62 @@ function SyncBadge({ collapsed }) {
   }
 
   return (
-    <div className="dropdown dropdown-end">
+    <div className="relative inline-block">
       <button
-        tabIndex={0}
-        className={`btn btn-ghost btn-sm gap-2 ${!online ? 'text-warning' : ''}`}
+        className="btn-ghost btn-circle text-mute hover:text-ink hover:bg-panel"
         title="Queued offline sales"
       >
-        <span className={`relative ${queued.some((q) => q.status === 'failed') ? 'text-error' : ''}`}>
-          {online ? <Loader className="h-4 w-4 animate-spin" /> : <WifiOff className="h-4 w-4" />}
+        <span className="relative">
+          {online ? <Loader className="h-4 w-4 spin" aria-hidden="true" /> : <WifiOff className="h-4 w-4" aria-hidden="true" />}
           {queued.length > 0 && (
-            <span className="badge badge-error badge-xs absolute -right-2 -top-2 px-1">
+            <span className="absolute -right-1 -top-1 px-1.5 bg-warn text-white text-[10px] font-bold rounded-full">
               {queued.length}
             </span>
           )}
         </span>
-        {!collapsed && <span className="hidden sm:inline">{!online ? 'Offline' : `${queued.length} queued`}</span>}
+        {!collapsed && <span className="hidden sm:inline text-xs text-mute">{!online ? 'Offline' : `${queued.length} queued`}</span>}
       </button>
-      <ul className="menu dropdown-content z-50 mt-2 w-80 rounded-xl bg-base-100 p-2 shadow">
-        <li className="menu-title flex-row items-center justify-between">
+      <ul className="absolute right-0 mt-2 w-64 rounded-lg bg-paper p-2 border border-line z-50">
+        <li className="flex items-center justify-between px-2 py-1 text-xs font-semibold uppercase tracking-wider text-mute">
           <span>Offline sale queue</span>
-          <span className="badge badge-ghost badge-sm">{queued.length}</span>
+          <span className="badge-pill badge-sm bg-panel text-xs">{queued.length}</span>
         </li>
         {!online && (
-          <li className="px-2 py-1 text-xs opacity-60">
-            You are offline. Sales taken now are saved here and replayed automatically when the
-            connection returns.
+          <li className="px-2 py-1 text-xs text-mute">
+            You are offline. Sales taken now are saved here and replayed when the connection returns.
           </li>
         )}
         {queued.length === 0 ? (
-          <li className="px-2 py-1 text-xs opacity-60">Nothing queued.</li>
+          <li className="px-2 py-1 text-xs text-mute">Nothing queued.</li>
         ) : (
           queued.map((q) => (
-            <li key={q.id} className="flex-row items-center gap-2 px-2 py-1">
+            <li key={q.id} className="flex items-center gap-2 px-2 py-1">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   Sale · {money(q.total)}
-                  <span className={`badge badge-xs ${q.status === 'failed' ? 'badge-error' : 'badge-warning'}`}>
+                  <span className={`badge-pill badge-sm ${q.status === 'failed' ? 'bg-warn-dim text-warn border-warn' : 'bg-accent-dim text-accent border-accent'}`}>
                     {q.status}
                   </span>
                 </div>
-                <div className="truncate text-xs opacity-60">
+                <div className="truncate text-xs text-mute">
                   {fmtDateTime(q.createdAt)}
                   {q.lastError ? ` · ${q.lastError}` : ''}
                 </div>
               </div>
               {q.status === 'failed' && (
-                <button aria-label="Retry this sale" className="btn btn-ghost btn-xs" onClick={() => retrySale(q.id)} title="Try this sale again">
-                  <RotateCw className="h-3 w-3" />
+                <button aria-label="Retry this sale" className="btn-ghost btn-xs" onClick={() => retrySale(q.id)} title="Try this sale again">
+                  <RotateCw className="h-3 w-3" aria-hidden="true" />
                 </button>
               )}
-              <button aria-label="Discard queued sale" className="btn btn-ghost btn-xs text-error" onClick={() => discardSale(q.id)} title="Discard queued sale">
-                <X className="h-3 w-3" />
+              <button aria-label="Discard queued sale" className="btn-ghost btn-xs text-warn" onClick={() => discardSale(q.id)} title="Discard queued sale">
+                <X className="h-3 w-3" aria-hidden="true" />
               </button>
             </li>
           ))
         )}
         {queued.length > 0 && online && (
           <li className="mt-1">
-            <button className={`btn btn-primary btn-sm btn-block ${syncing ? 'loading' : ''}`} onClick={syncNow}>Sync now</button>
+            <button className={`btn-cta btn-sm btn-block ${syncing ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={syncNow} disabled={syncing}>Sync now</button>
           </li>
         )}
       </ul>
@@ -137,15 +135,15 @@ function LocationPicker({ collapsed }) {
 
   if (collapsed) {
     return (
-      <div className="tooltip tooltip-right" data-tip="Register location">
-        <MapPin className="h-4 w-4 opacity-60" />
+      <div className="relative inline-block" data-tip="Register location">
+        <MapPin className="h-4 w-4 text-mute" aria-hidden="true" />
       </div>
     );
   }
 
   return (
     <select
-      className="select select-sm hidden sm:inline-flex"
+      className="select-field input-sm hidden sm:inline-flex bg-paper border border-line rounded-lg"
       title="Register location"
       value={value}
       onChange={(e) => { setLocationId(e.target.value); setValue(e.target.value); }}
@@ -193,24 +191,24 @@ function TimeClock({ collapsed }) {
   if (collapsed) {
     return (
       <button
-        className={`btn btn-ghost btn-sm btn-circle ${state.openShift ? 'text-success' : ''}`}
+        className={`btn-ghost btn-circle text-mute ${state.openShift ? 'text-accent' : ''}`}
         title={state.openShift ? `Clocked in · ${fmtHours(state.todaySeconds)}` : `Off shift · ${fmtHours(state.todaySeconds)}`}
         onClick={toggle}
         disabled={busy}
       >
-        <Clock className="h-4 w-4" />
+        <Clock className="h-4 w-4" aria-hidden="true" />
       </button>
     );
   }
 
   return (
     <button
-      className={`btn btn-ghost btn-sm gap-1 ${state.openShift ? 'text-success' : ''}`}
+      className={`btn-ghost btn-sm gap-1 text-mute ${state.openShift ? 'text-accent' : ''}`}
       title={state.openShift ? `Clocked in since ${fmtDateTime(state.openShift.clockIn)}` : 'Clock in'}
       onClick={toggle}
       disabled={busy}
     >
-      <Clock className="h-4 w-4" /> <span className="hidden md:inline">{state.openShift ? 'On shift' : 'Off'} ·</span>{' '}
+      <Clock className="h-4 w-4" aria-hidden="true" /> <span className="hidden md:inline text-xs text-mute">{state.openShift ? 'On shift' : 'Off'} ·</span>{' '}
       {fmtHours(state.todaySeconds)}
     </button>
   );
@@ -251,33 +249,33 @@ function SwitchUserModal({ open, onClose }) {
   }
 
   return (
-    <div className="modal modal-open" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <Modal open={open} onClose={onClose}>
       <div className="modal-box max-w-sm">
         {!target ? (
           <>
-            <h3 className="mb-3 text-lg font-bold">Who is taking over?</h3>
+            <h3 className="mb-3 text-lg font-bold text-ink">Who is taking over?</h3>
             <ul className="space-y-2">
               {(targets ?? []).map((u) => (
                 <li key={u.id}>
-                  <button className="btn btn-block justify-between" onClick={() => setTarget(u)}>
+                  <button className="btn-ghost btn-block justify-between" onClick={() => setTarget(u)}>
                     <span>{u.name}</span>
                     <RoleBadge role={u.role} />
                   </button>
                 </li>
               ))}
               {targets !== null && targets.length === 0 && (
-                <p className="py-4 text-center text-sm opacity-60">No other staff have a PIN yet.</p>
+                <p className="py-4 text-center text-xs text-mute">No other staff have a PIN yet.</p>
               )}
             </ul>
             <div className="modal-action">
-              <button className="btn btn-ghost btn-sm" onClick={onClose}>Cancel</button>
+              <button className="btn-ghost btn-xs" onClick={onClose}>Cancel</button>
             </div>
           </>
         ) : (
           <PinPad title={`PIN for ${target.name}`} confirmLabel="Switch" onDone={submitPin} onCancel={() => setTarget(null)} />
         )}
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -290,6 +288,7 @@ export default function Layout() {
   const toast = useToast();
   const [pinModal, setPinModal] = useState(null);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('esaripos.sidebar') === 'collapsed');
+  const location = useLocation();
 
   useEffect(() => { startAutoFlush(); }, []);
 
@@ -302,26 +301,29 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen bg-base-200">
+    <div className="flex h-screen bg-paper">
       {/* ── Desktop Sidebar ── */}
       <aside
-        className={`hidden flex-col border-r border-base-300 bg-base-100 transition-all duration-200 md:flex ${
-          collapsed ? 'w-[60px]' : 'w-56'
+        className={`hidden flex-col border-r border-line transition-all duration-200 md:flex ${
+          collapsed ? 'w-[56px]' : 'w-60'
         }`}
       >
         {/* Logo */}
-        <div className={`flex items-center gap-2 border-b border-base-300 px-3 py-3 ${collapsed ? 'justify-center' : 'px-3'}`}>
+        <div className={`flex items-center gap-2 border-b border-line px-3 py-4 ${collapsed ? 'justify-center' : 'px-3'}`}>
           <button
             onClick={toggleCollapse}
-            className="btn btn-ghost btn-xs btn-circle shrink-0"
+            className="btn-ghost btn-xs btn-circle text-mute hover:text-ink hover:bg-panel"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-4 w-4 shrink-0" aria-hidden="true" />
           </button>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-sm font-bold leading-tight tracking-tight truncate">eSariPOS</div>
-              <div className="truncate text-[10px] opacity-50 leading-tight">{tenant?.name}</div>
+              <div className="flex items-center gap-1.5 text-sm font-bold tracking-tight text-ink">
+                <span className="text-accent font-data text-xs font-bold">₱</span>
+                <span>eSariPOS</span>
+              </div>
+              <div className="truncate text-[10px] text-mute leading-tight">{tenant?.name}</div>
             </div>
           )}
         </div>
@@ -337,33 +339,36 @@ export default function Layout() {
             return (
               <div key={section.label} className="mb-3">
                 {!collapsed && (
-                  <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest opacity-40">
+                  <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-mute">
                     {section.label}
                   </div>
                 )}
-                {collapsed && <div className="my-2 mx-auto h-px w-4 bg-base-300" />}
+                {collapsed && <div className="my-2 mx-auto h-[1px] w-4 bg-line" />}
                 <ul className="flex flex-col gap-0.5">
-                  {visibleItems.map((item) => (
+                {visibleItems.map((item) => {
+                  const isItemActive = item.end ? location.pathname === item.to : location.pathname === item.to || location.pathname.startsWith(item.to === '/' ? '/' : item.to + '/');
+                  return (
                     <li key={item.to}>
                       <NavLink
                         to={item.to}
                         end={item.end}
-                        className={({ isActive }) =>
+                        className={() =>
                           `group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors ${
                             collapsed ? 'justify-center' : ''
                           } ${
-                            isActive
-                              ? 'bg-primary/10 font-semibold text-primary'
-                              : 'text-base-content/70 hover:bg-base-300/50 hover:text-base-content'
+                            isItemActive
+                              ? 'bg-accent-dim text-accent border-l border-accent font-semibold'
+                              : 'text-mute hover:bg-panel hover:text-ink'
                           }`
                         }
                         title={collapsed ? item.label : undefined}
                       >
-                        <item.icon className="h-4 w-4 shrink-0" strokeWidth={2} />
+                        <item.icon className={`h-4 w-4 shrink-0 ${isItemActive ? 'text-accent' : 'text-mute'}`} strokeWidth={2} />
                         {!collapsed && <span className="truncate">{item.label}</span>}
                       </NavLink>
                     </li>
-                  ))}
+                  );
+                })}
                 </ul>
               </div>
             );
@@ -371,23 +376,23 @@ export default function Layout() {
         </nav>
 
         {/* My Profile */}
-        <div className="border-t border-base-300 px-2 py-3">
+        <div className="border-t border-line px-2 py-3">
           <button
             onClick={() => navigate('/settings?tab=security')}
-            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors w-full text-base-content/70 hover:bg-base-300/50 hover:text-base-content ${
+            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors w-full text-mute hover:bg-panel hover:text-ink ${
               collapsed ? 'justify-center' : ''
             }`}
             title={collapsed ? 'My Profile' : undefined}
           >
             <div className="placeholder avatar">
-              <div className="w-6 rounded-full bg-primary/15 text-primary ring-1 ring-primary/20">
+              <div className="w-6 rounded-full bg-accent-dim text-accent border border-accent/20">
                 <span className="text-[10px] font-semibold uppercase leading-6">{user?.name?.[0]}</span>
               </div>
             </div>
             {!collapsed && (
               <div className="min-w-0 flex-1 text-left">
-                <div className="truncate text-sm font-medium">{user?.name}</div>
-                <div className="truncate text-[10px] opacity-50">{user?.email}</div>
+                <div className="truncate text-sm font-medium text-ink">{user?.name}</div>
+                <div className="truncate text-[10px] text-mute">{user?.email}</div>
               </div>
             )}
           </button>
@@ -396,13 +401,13 @@ export default function Layout() {
 
       {/* ── Main column ── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-base-300 bg-base-100 px-3 shadow-sm sm:px-4">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-line bg-paper px-3 sm:px-4">
           {/* ── Left: mobile menu + tenant ── */}
-          <div className="dropdown md:hidden">
-            <button className="btn btn-ghost btn-sm btn-circle" tabIndex={0} aria-label="Navigation menu">
-              <Menu className="h-5 w-5" />
+          <div className="relative md:hidden">
+            <button className="btn-ghost btn-circle text-mute hover:text-ink hover:bg-panel" tabIndex={0} aria-label="Navigation menu">
+              <Menu className="h-5 w-5 shrink-0" aria-hidden="true" />
             </button>
-            <ul className="menu dropdown-content z-50 mt-2 w-56 rounded-xl bg-base-100 p-2 shadow-lg">
+            <ul className="absolute left-0 mt-2 w-56 rounded-lg bg-paper p-2 border border-line z-50">
               {NAV_SECTIONS.flatMap((section, si) => {
                 const visibleItems = section.items.filter(
                   (n) => (n.perm ? hasPerm(n.perm) : true) && (!n.minRank || can(n.minRank))
@@ -413,13 +418,13 @@ export default function Layout() {
                 return [...separator, ...items];
               }).map((entry) =>
                 entry.type === 'sep' ? (
-                  <li key={entry.key} className="menu-title pt-2 text-[10px] uppercase tracking-widest opacity-40">
-                    <span className="px-0">&nbsp;</span>
+                  <li key={entry.key} className="px-0 pt-2 text-[10px] uppercase tracking-wider text-mute">
+                    <span>&nbsp;</span>
                   </li>
                 ) : (
                   <li key={entry.key}>
-                    <NavLink to={entry.to} end={entry.end}>
-                      <entry.icon className="h-4 w-4" />
+                    <NavLink to={entry.to} end={entry.end} className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-mute hover:bg-panel hover:text-ink">
+                      <entry.icon className="h-4 w-4 shrink-0 text-mute" aria-hidden="true" />
                       {entry.label}
                     </NavLink>
                   </li>
@@ -428,17 +433,17 @@ export default function Layout() {
             </ul>
           </div>
 
-          <div className="truncate text-sm font-semibold text-base-content sm:text-[15px]">{tenant?.name}</div>
+          <div className="truncate text-sm font-bold text-ink sm:text-[15px]">{tenant?.name}</div>
 
           {/* ── Right: action controls ── */}
           <div className="ml-auto flex items-center gap-1">
-            {/* Primary actions */}
             <button
-              className="btn btn-ghost btn-sm btn-circle"
+              className="btn-ghost btn-circle text-mute hover:text-accent hover:bg-panel"
               title="Open customer-facing display"
               onClick={() => window.open('/display', 'novapos-display', 'width=800,height=600')}
+              aria-label="Customer-facing display"
             >
-              <Monitor className="h-4 w-4" />
+              <Monitor className="h-4 w-4 shrink-0" aria-hidden="true" />
             </button>
 
             <div className="hidden sm:block">
@@ -451,50 +456,48 @@ export default function Layout() {
 
             <SyncBadge collapsed={false} />
 
-            {/* Separator */}
-            <div className="mx-1 hidden h-5 w-px bg-base-300 sm:block" />
-
             {/* Secondary actions */}
-            <button className="btn btn-ghost btn-sm btn-circle" onClick={themeToggle} aria-label="Toggle color theme" title="Toggle theme">
-              <Moon className="h-4 w-4" />
-            </button>
-
-            {/* User menu */}
-            <div className="dropdown dropdown-end">
-              <button aria-label="Account menu" className="btn btn-ghost btn-sm btn-circle" tabIndex={0}>
-                <User className="h-4 w-4" />
+            <div className="hidden sm:flex items-center gap-1">
+              <button className="btn-ghost btn-circle text-mute hover:text-ink hover:bg-panel" onClick={themeToggle} aria-label="Toggle color theme" title="Toggle theme">
+                <Moon className="h-4 w-4 shrink-0" aria-hidden="true" />
               </button>
-              <ul className="menu dropdown-content z-50 mt-2 w-56 rounded-xl bg-base-100 p-2 shadow-lg">
-                <li className="menu-title flex-row items-center justify-between gap-2">
-                  <span className="truncate">{user?.email}</span>
+            </div>
+
+            <div className="relative inline-block">
+              <button aria-label="Account menu" className="btn-ghost btn-circle text-mute hover:text-ink hover:bg-panel" tabIndex={0}>
+                <User className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </button>
+              <ul className="absolute right-0 mt-2 w-56 rounded-lg bg-paper p-2 border border-line z-50">
+                <li className="flex items-center justify-between gap-2 px-2 py-1">
+                  <span className="truncate text-sm text-ink">{user?.email}</span>
                   <RoleBadge role={user?.role} />
                 </li>
                 <li>
                   <button onClick={() => { setPinModal('switch'); document.activeElement?.blur(); }}>
-                    <ArrowRightLeft className="mr-2 inline h-4 w-4" /> Switch user (PIN)
+                    <ArrowRightLeft className="mr-2 inline h-4 w-4 shrink-0 text-mute" aria-hidden="true" /> Switch user (PIN)
                   </button>
                 </li>
                 <li>
                   <button onClick={() => { setPinModal('set'); document.activeElement?.blur(); }}>
-                    <Hash className="mr-2 inline h-4 w-4" /> Set my register PIN
+                    <Hash className="mr-2 inline h-4 w-4 shrink-0 text-mute" aria-hidden="true" /> Set my register PIN
                   </button>
                 </li>
                 <li>
                   <button onClick={() => { navigate('/pos?drawer=1'); document.activeElement?.blur(); }}>
-                    <Banknote className="mr-2 inline h-4 w-4" /> Cash drawer
+                    <Banknote className="mr-2 inline h-4 w-4 shrink-0 text-mute" aria-hidden="true" /> Cash drawer
                   </button>
                 </li>
-                <div className="my-1 h-px bg-base-300" />
+                <div className="my-1 h-[1px] bg-line" />
                 <li>
-                  <button onClick={() => { logout(); navigate('/login'); }} className="text-error">
-                    <LogOut className="mr-2 inline h-4 w-4" /> Sign out
+                  <button onClick={() => { logout(); navigate('/login'); }} className="text-warn">
+                    <LogOut className="mr-2 inline h-4 w-4 shrink-0" aria-hidden="true" /> Sign out
                   </button>
                 </li>
               </ul>
               {pinModal === 'switch' && <SwitchUserModal open onClose={() => setPinModal(null)} />}
               {pinModal === 'set' && (
-                <div className="modal modal-open" onMouseDown={(e) => e.target === e.currentTarget && setPinModal(null)}>
-                  <div className="modal-box max-w-sm">
+                <div className="fixed inset-0 z-50" onMouseDown={(e) => e.target === e.currentTarget && setPinModal(null)}>
+                  <div className="modal-box max-w-sm mx-auto mt-40">
                     <PinPad
                       title="Set your 4-8 digit PIN"
                       confirmLabel="Save"
@@ -514,7 +517,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
+        <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6 bg-paper">
           <Outlet />
         </main>
       </div>

@@ -6,19 +6,35 @@ import { Zap, Package, X, Truck, Pencil, ClipboardList, Star, Shuffle } from 'lu
 import { EmptyState, Field, Modal, Spinner, useToast } from '../components/ui.jsx';
 
 const TABS = ['Purchase orders', 'Suppliers', 'Stock counts', 'Transfers'];
-const PO_STATUS = { draft: 'badge-ghost', sent: 'badge-info', partial: 'badge-warning', received: 'badge-success', cancelled: 'badge-error' };
+const PO_STATUS = {
+  draft: { cls: 'border border-line text-mute', label: 'Draft' },
+  sent: { cls: 'bg-accent/10 text-accent border border-accent/20', label: 'Sent' },
+  partial: { cls: 'bg-warn/10 text-warn border border-warn/20', label: 'Partial' },
+  received: { cls: 'bg-accent/10 text-accent border border-accent/20', label: 'Received' },
+  cancelled: { cls: 'bg-warn text-white', label: 'Cancelled' },
+};
 
 export default function Inventory() {
   const [tab, setTab] = useState('Purchase orders');
   return (
     <div className="space-y-4">
-      <div>
+      <div className="receipt-head">
+        <div className="receipt-meta">
+          <span className="font-bold">eSariPOS</span>
+          <span className="dot" aria-hidden="true"></span>
+          <span>{new Date().toLocaleDateString()}</span>
+        </div>
         <h1 className="text-xl font-bold">Inventory & suppliers</h1>
-        <p className="text-sm opacity-60">Purchase orders, suppliers, cycle counts and stock transfers</p>
+        <p className="text-sm text-mute">Purchase orders, suppliers, cycle counts and stock transfers</p>
       </div>
-      <div role="tablist" className="tabs-boxed tabs w-fit">
+      <div role="tablist" className="flex gap-1 border-b border-line pb-1 mt-2">
         {TABS.map((t) => (
-          <button key={t} role="tab" className={`tab ${tab === t ? 'tab-active' : ''}`} onClick={() => setTab(t)}>
+          <button
+            key={t}
+            role="tab"
+            className={`-mb-1 border-b-2 py-2 px-3 text-sm font-medium transition-colors ${tab === t ? 'border-accent text-accent' : 'border-transparent text-mute hover:text-ink hover:border-line/30'}`}
+            onClick={() => setTab(t)}
+          >
             {t}
           </button>
         ))}
@@ -76,40 +92,43 @@ function PurchaseOrdersTab() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <select className="select select-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <select className="select-field input-sm text-ink" value={status} onChange={(e) => setStatus(e.target.value)}>
           {['all', 'draft', 'sent', 'partial', 'received', 'cancelled'].map((s) => (
             <option key={s} value={s}>{s === 'all' ? 'All statuses' : s}</option>
           ))}
         </select>
-        <button className="btn btn-primary btn-sm ml-auto" onClick={() => setCreating(true)}>+ New purchase order</button>
-        <button className="btn btn-outline btn-sm" onClick={loadSuggestions}><Zap className="mr-1 inline h-4 w-4" /> From reorder suggestions</button>
+        <button className="btn-cta btn-sm ml-auto" onClick={() => setCreating(true)}>+ New purchase order</button>
+        <button className="btn-outline btn-sm" onClick={loadSuggestions}><Zap className="mr-1 inline h-4 w-4" /> From reorder suggestions</button>
       </div>
 
       {!pos ? (
         <Spinner />
       ) : pos.length === 0 ? (
-        <EmptyState icon={<Package className="mx-auto h-12 w-12 opacity-30" />} title="No purchase orders" subtitle="Create one manually or from reorder suggestions." />
+        <EmptyState icon={<Package className="mx-auto h-12 w-12 text-mute" />} title="No purchase orders" subtitle="Create one manually or from reorder suggestions." />
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
-          <table className="table">
+        <div className="overflow-x-auto card-counter">
+          <table className="table-counter">
             <thead>
-              <tr><th>Supplier</th><th>Status</th><th>Lines</th><th className="text-right">Cost</th><th>Created</th><th></th></tr>
+              <tr><th className="text-ink">Supplier</th><th className="text-ink">Status</th><th className="text-ink">Lines</th><th className="text-right text-ink">Cost</th><th className="text-ink">Created</th><th></th></tr>
             </thead>
             <tbody>
-              {pos.map((p) => (
-                <tr key={p.id}>
-                  <td className="font-medium">{p.supplierName}</td>
-                  <td><span className={`badge badge-sm ${PO_STATUS[p.status] ?? 'badge-ghost'}`}>{p.status}</span></td>
-                  <td>{p.lineCount}</td>
-                  <td className="text-right font-semibold">{money(p.totalCost)}</td>
-                  <td className="text-xs opacity-60">{fmtDateTime(p.createdAt)}</td>
-                  <td className="text-right">
-                    {['sent', 'partial'].includes(p.status) && (
-                      <button className="btn btn-xs btn-primary" onClick={() => openReceive(p.id)}>Receive</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {pos.map((p) => {
+                const s = PO_STATUS[p.status] ?? { cls: 'border border-line text-mute', label: p.status };
+                return (
+                  <tr key={p.id}>
+                    <td className="font-medium text-ink">{p.supplierName}</td>
+                    <td><span className={`badge-pill badge-sm rounded-full ${s.cls}`}>{s.label}</span></td>
+                    <td className="text-mute">{p.lineCount}</td>
+                    <td className="text-right font-semibold text-ink">{money(p.totalCost)}</td>
+                    <td className="text-xs text-mute">{fmtDateTime(p.createdAt)}</td>
+                    <td className="text-right">
+                      {['sent', 'partial'].includes(p.status) && (
+                        <button className="btn-cta btn-xs" onClick={() => openReceive(p.id)}>Receive</button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -134,7 +153,7 @@ function PurchaseOrdersTab() {
 
 function ProductPicker({ products, value, onChange }) {
   return (
-    <select className="select select-sm w-full" value={value} onChange={(e) => onChange(e.target.value)}>
+    <select className="select-field input-sm w-full text-ink" value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">Select product…</option>
       {products.map((p) => (
         <option key={p.id} value={p.id}>
@@ -213,19 +232,19 @@ function POCreateModal({ open, suggestions, onClose, onDone }) {
       <div className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Supplier">
-            <select className="select select-md w-full" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+            <select className="select-field input-md w-full text-ink" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
               <option value="">Select supplier…</option>
               {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </Field>
           <Field label="Note">
-            <input className="input input-md w-full" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
+            <input className="input-field input-md w-full text-ink" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
           </Field>
         </div>
 
         {lines.length === 0 && (
           <button
-            className="btn btn-outline btn-sm"
+            className="btn btn-outline text-ink border-line hover:bg-panel hover:text-ink btn-sm"
             onClick={() => setLines([{ productId: '', quantity: '', unitCost: '' }])}
           >
             Add first line
@@ -233,28 +252,28 @@ function POCreateModal({ open, suggestions, onClose, onDone }) {
         )}
         <ul className="space-y-2">
           {lines.map((l, idx) => (
-            <li key={idx} className="flex flex-wrap items-center gap-2 rounded-lg bg-base-200 p-2">
+            <li key={idx} className="flex flex-wrap items-center gap-2 rounded-lg bg-panel p-2">
               <div className="min-w-40 flex-1"><ProductPicker products={products} value={l.productId}
                 onChange={(v) => setLines((ls) => ls.map((x, i) => (i === idx ? { ...x, productId: v } : x)))} /></div>
-              <input type="number" min="0" step="0.001" placeholder="Qty" className="input input-sm w-24"
+              <input type="number" min="0" step="0.001" placeholder="Qty" className="input-field input-sm w-24 text-ink"
                 value={l.quantity}
                 onChange={(e) => setLines((ls) => ls.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))} />
-              <input type="number" min="0" step="0.01" placeholder="Unit cost" className="input input-sm w-28"
+              <input type="number" min="0" step="0.01" placeholder="Unit cost" className="input-field input-sm w-28 text-ink"
                 value={l.unitCost}
                 onChange={(e) => setLines((ls) => ls.map((x, i) => (i === idx ? { ...x, unitCost: e.target.value } : x)))} />
-              <button className="btn btn-ghost btn-sm text-error"
+              <button className="btn-ghost btn-sm text-warn hover:bg-warn/10"
                 onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}><X className="h-3 w-3" /></button>
             </li>
           ))}
         </ul>
-        <button className="btn btn-ghost btn-sm"
+        <button className="btn-ghost btn-sm text-mute hover:bg-panel hover:text-ink"
           onClick={() => setLines((ls) => [...ls, { productId: '', quantity: '', unitCost: '' }])}>
           + Add line
         </button>
 
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={!valid || busy} onClick={create}>
+          <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>Cancel</button>
+          <button className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!valid || busy} onClick={create}>
             Create order
           </button>
         </div>
@@ -298,18 +317,18 @@ function ReceiveModal({ open, po, money, onClose, onDone }) {
         {po.lines.map((l) => {
           const remaining = Math.round((l.quantity - l.receivedQty) * 1000) / 1000;
           return (
-            <div key={l.id} className="flex items-center gap-3 rounded-lg bg-base-200 p-2 text-sm">
-              <span className="flex-1 truncate font-medium">{l.productName}</span>
-              <span className="text-xs opacity-60">ordered {l.quantity} · got {l.receivedQty} · {money(l.unitCost)}</span>
-              <input type="number" min="0" max={remaining} step="0.001" className="input input-sm w-24 text-right"
+            <div key={l.id} className="flex items-center gap-3 rounded-lg bg-panel p-2 text-sm">
+              <span className="flex-1 truncate font-medium text-ink">{l.productName}</span>
+              <span className="text-xs text-mute">ordered {l.quantity} · got {l.receivedQty} · {money(l.unitCost)}</span>
+              <input type="number" min="0" max={remaining} step="0.001" className="input input-sm w-24 text-right text-ink"
                 value={qtys[l.id] ?? 0}
                 onChange={(e) => setQtys((q) => ({ ...q, [l.id]: Math.min(Math.max(Number(e.target.value) || 0, 0), remaining) }))} />
             </div>
           );
         })}
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>Close</button>
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={entries.length === 0 || busy} onClick={receive}>
+          <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>Close</button>
+          <button className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={entries.length === 0 || busy} onClick={receive}>
             Receive {entries.length} line{entries.length === 1 ? '' : 's'}
           </button>
         </div>
@@ -340,26 +359,26 @@ function SuppliersTab() {
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <button className="btn btn-primary btn-sm" onClick={() => setEditing({})}>+ Add supplier</button>
+        <button className="btn-cta btn-sm" onClick={() => setEditing({})}>+ Add supplier</button>
       </div>
       {!suppliers ? (
         <Spinner />
       ) : suppliers.length === 0 ? (
-        <EmptyState icon={<Truck className="mx-auto h-12 w-12 opacity-30" />} title="No suppliers yet" />
+        <EmptyState icon={<Truck className="mx-auto h-12 w-12 text-mute" />} title="No suppliers yet" />
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
-          <table className="table">
-            <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Email</th><th className="text-right">POs</th><th></th></tr></thead>
+        <div className="overflow-x-auto card-counter">
+          <table className="table-counter">
+            <thead><tr><th className="text-ink">Name</th><th className="text-ink">Contact</th><th className="text-ink">Phone</th><th className="text-ink">Email</th><th className="text-right text-ink">POs</th><th></th></tr></thead>
             <tbody>
               {suppliers.map((s) => (
-                <tr key={s.id} className={!s.isActive ? 'opacity-50' : ''}>
-                  <td className="font-medium">{s.name}</td>
-                  <td>{s.contactName ?? '—'}</td>
-                  <td>{s.phone ?? '—'}</td>
-                  <td>{s.email ?? '—'}</td>
-                  <td className="text-right">{s.orderCount}</td>
+                <tr key={s.id} className={!s.isActive ? 'text-mute' : ''}>
+                  <td className="font-medium text-ink">{s.name}</td>
+                  <td className="text-mute">{s.contactName ?? '—'}</td>
+                  <td className="text-mute">{s.phone ?? '—'}</td>
+                  <td className="text-mute">{s.email ?? '—'}</td>
+                  <td className="text-right text-ink">{s.orderCount}</td>
                   <td className="text-right">
-                      <button aria-label={`Edit ${s.name}`} className="btn btn-ghost btn-xs" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button>
+                      <button aria-label={`Edit ${s.name}`} className="btn-ghost btn-xs text-mute hover:bg-panel hover:text-ink" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -414,15 +433,15 @@ function SupplierModal({ open, supplier, onClose, onDone }) {
   return (
     <Modal open={open} onClose={onClose} title={isNew ? 'Add supplier' : `Edit ${supplier.name}`}>
       <div className="space-y-3">
-        <Field label="Name"><input className="input input-md w-full" value={form.name} onChange={set('name')} autoFocus /></Field>
+        <Field label="Name"><input className="input input-md w-full text-ink" value={form.name} onChange={set('name')} autoFocus /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Contact person"><input className="input input-md w-full" value={form.contactName} onChange={set('contactName')} /></Field>
-          <Field label="Phone"><input className="input input-md w-full" value={form.phone} onChange={set('phone')} /></Field>
+          <Field label="Contact person"><input className="input input-md w-full text-ink" value={form.contactName} onChange={set('contactName')} /></Field>
+          <Field label="Phone"><input className="input input-md w-full text-ink" value={form.phone} onChange={set('phone')} /></Field>
         </div>
-        <Field label="Email"><input type="email" className="input input-md w-full" value={form.email} onChange={set('email')} /></Field>
+        <Field label="Email"><input type="email" className="input input-md w-full text-ink" value={form.email} onChange={set('email')} /></Field>
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" disabled={!form.name.trim()} onClick={save}>Save</button>
+          <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>Cancel</button>
+          <button className="btn-cta" disabled={!form.name.trim()} onClick={save}>Save</button>
         </div>
       </div>
     </Modal>
@@ -458,30 +477,35 @@ function CountsTab() {
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <button className="btn btn-primary btn-sm" onClick={() => setCreating(true)}>+ New cycle count</button>
+        <button className="btn-cta btn-sm" onClick={() => setCreating(true)}>+ New cycle count</button>
       </div>
 
       {!counts ? (
         <Spinner />
       ) : counts.length === 0 ? (
-        <EmptyState icon={<ClipboardList className="mx-auto h-12 w-12 opacity-30" />} title="No counts yet" subtitle="A cycle count snapshots stock so you can audit variances." />
+        <EmptyState icon={<ClipboardList className="mx-auto h-12 w-12 text-mute" />} title="No counts yet" subtitle="A cycle count snapshots stock so you can audit variances." />
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
-          <table className="table">
-            <thead><tr><th>Scope</th><th>Status</th><th>Counted</th><th>Variance value</th><th>Created</th><th></th></tr></thead>
+        <div className="overflow-x-auto card-counter">
+          <table className="table-counter">
+            <thead><tr><th className="text-ink">Scope</th><th className="text-ink">Status</th><th className="text-ink">Counted</th><th className="text-right text-ink">Variance value</th><th className="text-ink">Created</th><th></th></tr></thead>
             <tbody>
-              {counts.map((c) => (
-                <tr key={c.id} className="cursor-pointer hover:bg-base-200" onClick={async () => {
-                  try { setActive(await api(`/counts/${c.id}`)); } catch (err) { toast.error(err.message); }
-                }}>
-                  <td className="font-medium">{c.categoryName ?? 'All products'}</td>
-                  <td><span className={`badge badge-sm ${c.status === 'open' ? 'badge-warning' : c.status === 'applied' ? 'badge-success' : 'badge-ghost'}`}>{c.status}</span></td>
-                  <td>{c.countedCount}/{c.lineCount}</td>
-                  <td className="text-right">{c.varianceTotal != null ? money(Number(c.varianceTotal)) : '—'}</td>
-                  <td className="text-xs opacity-60">{fmtDateTime(c.createdAt)}</td>
-                  <td />
-                </tr>
-              ))}
+              {counts.map((c) => {
+                const s = c.status === 'open' ? { cls: 'bg-warn/10 text-warn border border-warn/20', label: 'Open' }
+                  : c.status === 'applied' ? { cls: 'bg-accent/10 text-accent border border-accent/20', label: 'Applied' }
+                  : { cls: 'border border-line text-mute', label: c.status };
+                return (
+                  <tr key={c.id} className="cursor-pointer hover:bg-panel" onClick={async () => {
+                    try { setActive(await api(`/counts/${c.id}`)); } catch (err) { toast.error(err.message); }
+                  }}>
+                    <td className="font-medium text-ink">{c.categoryName ?? 'All products'}</td>
+                    <td><span className={`badge-pill badge-sm rounded-full ${s.cls}`}>{s.label}</span></td>
+                    <td className="text-ink">{c.countedCount}/{c.lineCount}</td>
+                    <td className="text-right text-ink">{c.varianceTotal != null ? money(Number(c.varianceTotal)) : '—'}</td>
+                    <td className="text-xs text-mute">{fmtDateTime(c.createdAt)}</td>
+                    <td />
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -518,15 +542,15 @@ function CountCreateModal({ open, categories, onClose, onDone }) {
     <Modal open={open} onClose={onClose} title="New cycle count">
       <div className="space-y-3">
         <Field label="Scope">
-          <select className="select select-md w-full" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          <select className="select-field input-md w-full text-ink" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
             <option value="">All products</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </Field>
-        <p className="text-xs opacity-60">System quantities are snapshotted now. Enter what you actually count, then apply.</p>
+        <p className="text-xs text-mute">System quantities are snapshotted now. Enter what you actually count, then apply.</p>
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={busy} onClick={create}>Start count</button>
+          <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>Cancel</button>
+          <button className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={busy} onClick={create}>Start count</button>
         </div>
       </div>
     </Modal>
@@ -578,34 +602,34 @@ function CountDetailModal({ open, count, money, onClose, onChanged }) {
     <Modal open={open} onClose={onClose} title={`Cycle count · ${count.categoryName ?? 'All products'}`} wide>
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-sm">
-          <span className={`badge badge-sm ${count.status === 'open' ? 'badge-warning' : count.status === 'applied' ? 'badge-success' : 'badge-ghost'}`}>{count.status}</span>
-          <span className="opacity-60">{count.countedCount}/{count.lineCount} counted</span>
-          <input className="input input-sm ml-auto w-44" placeholder="Filter…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <span className={`badge-pill badge-sm rounded-full ${count.status === 'open' ? 'bg-warn/10 text-warn border border-warn/20' : count.status === 'applied' ? 'bg-accent/10 text-accent border border-accent/20' : 'border border-line text-mute'}`}>{count.status}</span>
+          <span className="text-mute">{count.countedCount}/{count.lineCount} counted</span>
+          <input className="input-field input-sm ml-auto w-44 text-ink" placeholder="Filter…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <ul className="max-h-80 space-y-1 overflow-y-auto">
           {visible.map((l) => (
-            <li key={l.productId} className="flex items-center gap-3 rounded-lg bg-base-200 p-2 text-sm">
-              <span className="flex-1 truncate">{l.productName}</span>
-              <span className="font-mono text-xs opacity-60">sys {r3(l.systemQty)}</span>
+            <li key={l.productId} className="flex items-center gap-3 rounded-lg bg-panel p-2 text-sm">
+              <span className="flex-1 truncate text-ink">{l.productName}</span>
+              <span className="font-data text-xs text-mute">sys {r3(l.systemQty)}</span>
               <input
                 type="number" min="0" step="0.001" disabled={count.status !== 'open'}
                 placeholder="counted"
-                className="input input-sm w-24 text-right"
+className="input-field input-sm w-24 text-right text-ink"
                 value={entries[l.productId] ?? ''}
                 onChange={(e) => setEntries((en) => ({ ...en, [l.productId]: e.target.value === '' ? null : e.target.value }))}
               />
               {l.variance != null && l.variance !== 0 && (
-                <span className={`badge badge-xs ${l.variance < 0 ? 'badge-error' : 'badge-success'}`}>{r3(l.variance)}</span>
+                <span className={`badge-pill badge-xs ${l.variance < 0 ? 'fill-warn' : 'accent'}`}>{r3(l.variance)}</span>
               )}
             </li>
           ))}
         </ul>
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+          <button className="btn-ghost text-mute hover:bg-panel hover:text-ink" onClick={onClose}>Close</button>
           {count.status === 'open' && (
             <>
-              <button className={`btn ${busy ? 'loading' : ''}`} disabled={busy} onClick={() => save(false)}>Save progress</button>
-              <button className={`btn btn-primary ${busy ? 'loading' : ''}`} disabled={busy} onClick={() => save(true)}>Apply adjustments</button>
+              <button className={`btn-outline text-ink border-line hover:bg-panel hover:text-ink ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={busy} onClick={() => save(false)}>Save progress</button>
+              <button className={`btn-cta ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={busy} onClick={() => save(true)}>Apply adjustments</button>
             </>
           )}
         </div>
@@ -673,49 +697,49 @@ function TransfersTab() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
-      <div className="card bg-base-100 p-4 shadow">
-        <h3 className="mb-3 font-bold">Move stock</h3>
+      <div className="card-counter p-4">
+        <h3 className="mb-3 font-bold text-ink">Move stock</h3>
         <div className="space-y-3">
           <Field label="Product">
             <ProductPicker products={products} value={form.productId} onChange={(v) => setForm((f) => ({ ...f, productId: v }))} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="From">
-              <select className="select select-md w-full" value={form.from} onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))}>
+              <select className="select-field input-md w-full text-ink" value={form.from} onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))}>
                 <option value="">Main stock</option>
-                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? <Star className="inline h-3 w-3 fill-current" /> : ''}</option>)}
+                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? <Star className="inline h-3 w-3 fill-current text-accent" /> : ''}</option>)}
               </select>
             </Field>
             <Field label="To">
-              <select className="select select-md w-full" value={form.to} onChange={(e) => setForm((f) => ({ ...f, to: e.target.value }))}>
+              <select className="select-field input-md w-full text-ink" value={form.to} onChange={(e) => setForm((f) => ({ ...f, to: e.target.value }))}>
                 <option value="">Main stock</option>
-                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? <Star className="inline h-3 w-3 fill-current" /> : ''}</option>)}
+                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}{l.isDefault ? <Star className="inline h-3 w-3 fill-current text-accent" /> : ''}</option>)}
               </select>
             </Field>
           </div>
           <Field label="Quantity">
-            <input type="number" min="0" step="0.001" className="input input-md w-full" value={form.quantity}
+            <input type="number" min="0" step="0.001" className="input-field input-md w-full text-ink" value={form.quantity}
               onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} />
           </Field>
-          <button className={`btn btn-primary btn-block ${busy ? 'loading' : ''}`} disabled={!canSubmit || busy} onClick={transfer}>
+          <button className={`btn-cta w-full ${busy ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!canSubmit || busy} onClick={transfer}>
             Transfer
           </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-base-100 shadow">
+      <div className="overflow-x-auto card-counter">
         {history.length === 0 ? (
-          <EmptyState icon={<Shuffle className="mx-auto h-12 w-12 opacity-30" />} title="No transfers yet" />
+          <EmptyState icon={<Shuffle className="mx-auto h-12 w-12 text-mute" />} title="No transfers yet" subtitle="Move stock between locations to get started." />
         ) : (
-          <table className="table">
-            <thead><tr><th>Reference</th><th>Product</th><th className="text-right">Quantity</th><th>When</th></tr></thead>
+          <table className="table-counter">
+            <thead><tr><th className="text-ink">Reference</th><th className="text-ink">Product</th><th className="text-right text-ink">Quantity</th><th className="text-ink">When</th></tr></thead>
             <tbody>
               {history.map((t) => (
                 <tr key={t.reference}>
-                  <td className="font-mono text-xs opacity-70">{t.reference}{t.note ? ` · ${t.note}` : ''}</td>
-                  <td>{t.productName}</td>
-                  <td className="text-right font-semibold">{t.quantity}</td>
-                  <td className="text-xs opacity-60">{fmtDateTime(t.createdAt)}</td>
+                  <td className="font-data text-xs text-mute">{t.reference}{t.note ? ` · ${t.note}` : ''}</td>
+                  <td className="text-ink">{t.productName}</td>
+                  <td className="text-right font-semibold text-ink">{t.quantity}</td>
+                  <td className="text-xs text-mute">{fmtDateTime(t.createdAt)}</td>
                 </tr>
               ))}
             </tbody>
